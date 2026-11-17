@@ -221,7 +221,7 @@ export function ConnectGuideView({
 
               <div className="p-5 grid gap-4 text-xs">
                 <div>
-                  <div className="font-bold text-slate-800 mb-1">Create this file</div>
+                  <div className="font-bold text-slate-800 mb-1">Create this file at the exact path</div>
                   <code className="font-mono text-blue-700">{currentGuideSetup.file}</code>
                 </div>
                 <div>

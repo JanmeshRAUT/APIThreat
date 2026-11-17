@@ -336,7 +336,7 @@ MONITOR_API_KEY={{guideApiKeyPlaceholder}}`,
       note: 'This reports request metadata only; it never reads request bodies, passwords, or query values.',
     },
     java: {
-      file: 'Create src/main/java/com/yourcompany/security/SecurityMonitorFilter.java',
+      file: 'src/main/java/com/yourcompany/security/SecurityMonitorFilter.java',
       main: 'MAIN STEP: Paste the filter code into that file. Keep package com.yourcompany.security, or change it to your own package. The @Component annotation activates it automatically.',
       install: 'Spring Boot 3 / Spring MVC is required. No extra dependency is needed when spring-boot-starter-web is already present.',
       env: `monitor.url={{platformUrl}}
