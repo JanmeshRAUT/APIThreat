@@ -615,11 +615,10 @@ export default function App() {
   // MAIN CENTRAL PLATFORM UI
   // ----------------------------------------------------
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased">
-      {/* 1. TOP HEADER & NAVIGATION */}
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
-        {/* Brand & Tabs */}
-        <div className="flex items-center gap-6">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex antialiased">
+      {/* Left navigation panel */}
+      <aside className="hidden lg:flex lg:w-64 xl:w-72 shrink-0 flex-col bg-white border-r border-slate-200 sticky top-0 h-screen">
+        <div className="p-5 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <Logo size={36} className="w-9 h-9" />
             <div>
@@ -634,9 +633,8 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          {/* Navigation Tabs */}
-          <nav aria-label="Primary navigation" className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs max-w-full overflow-x-auto">
+        </div>
+        <nav aria-label="Primary navigation" className="flex flex-col gap-1 p-4 text-xs">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
@@ -725,11 +723,26 @@ export default function App() {
               <Sliders className="w-3.5 h-3.5 text-slate-600" />
               <span>Settings</span>
             </button>
-          </nav>
-        </div>
+        </nav>
+      </aside>
 
-        {/* Global Controls & Actions */}
-        <div className="flex items-center gap-2.5">
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Global controls */}
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between lg:justify-end gap-2.5 sticky top-0 z-40">
+          <select
+            aria-label="Navigate dashboard"
+            value={activeTab}
+            onChange={(event) => setActiveTab(event.target.value as typeof activeTab)}
+            className="lg:hidden max-w-[190px] px-2.5 py-1.5 text-xs font-semibold bg-slate-100 border border-slate-200 rounded-lg text-slate-700"
+          >
+            <option value="dashboard">Dashboard</option>
+            <option value="threats">Threats</option>
+            <option value="rules">Rules</option>
+            <option value="applications">Applications ({apps.length})</option>
+            <option value="guide">Connect Guide</option>
+            <option value="ml">ML Data</option>
+            <option value="settings">Settings</option>
+          </select>
           {/* Mode Indicator & Settings trigger */}
           <div
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-200"
@@ -760,11 +773,10 @@ export default function App() {
               <LogOut className="w-4 h-4" />
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
       {/* 2. BODY CONTENT ROUTED BY ACTIVE TAB */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col gap-6">
+      <main className="flex-1 w-full p-6 flex flex-col gap-6">
         {activeTab === 'dashboard' && (
           <DashboardView
             apps={apps}
@@ -961,6 +973,7 @@ export default function App() {
           <span>Rule-Based Detection (13 Rules)</span>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
