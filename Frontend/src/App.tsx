@@ -439,7 +439,7 @@ export default function App() {
   const requestsPerMinuteChartData = useMemo(() => {
     if (!stats?.requests_per_minute) return [];
     return stats.requests_per_minute.map((item) => ({
-      time: item.time,
+      time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       requests: item.requests,
       errors: item.errors,
     }));

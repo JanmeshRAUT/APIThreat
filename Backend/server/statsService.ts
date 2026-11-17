@@ -26,19 +26,21 @@ export function calculateDashboardStats(appId?: string): DashboardStats {
   const ipMap = new Map<string, number>();
 
   // 30 minute time series buckets
-  const now = new Date();
-  const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-  const minuteBuckets: Map<string, MinuteMetric> = new Map();
+  const now = Date.now();
+  const currentMinute = Math.floor(now / 60_000) * 60_000;
+  const thirtyMinutesAgo = currentMinute - 29 * 60_000;
+  const minuteBuckets: Map<number, MinuteMetric> = new Map();
 
   for (let i = 29; i >= 0; i--) {
-    const slotTime = new Date(now.getTime() - i * 60 * 1000);
+    const slotTimestamp = currentMinute - i * 60_000;
+    const slotTime = new Date(slotTimestamp);
     const hours = slotTime.getHours().toString().padStart(2, '0');
     const minutes = slotTime.getMinutes().toString().padStart(2, '0');
     const key = `${hours}:${minutes}`;
 
-    minuteBuckets.set(key, {
+    minuteBuckets.set(slotTimestamp, {
       time: key,
-      timestamp: slotTime.getTime(),
+      timestamp: slotTimestamp,
       requests: 0,
       errors: 0,
     });
@@ -74,11 +76,9 @@ export function calculateDashboardStats(appId?: string): DashboardStats {
 
     try {
       const recDate = new Date(r.timestamp);
-      if (recDate >= thirtyMinutesAgo) {
-        const hours = recDate.getHours().toString().padStart(2, '0');
-        const minutes = recDate.getMinutes().toString().padStart(2, '0');
-        const key = `${hours}:${minutes}`;
-        const bucket = minuteBuckets.get(key);
+      if (recDate.getTime() >= thirtyMinutesAgo) {
+        const bucketTimestamp = Math.floor(recDate.getTime() / 60_000) * 60_000;
+        const bucket = minuteBuckets.get(bucketTimestamp);
         if (bucket) {
           bucket.requests++;
           if (r.status_code >= 400) {
