@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+data/
+apps.json
+threats.json
+traffic.jsonl
+features.jsonl
+alerts_history.json
+rules.json
+settings.json
+*.log
