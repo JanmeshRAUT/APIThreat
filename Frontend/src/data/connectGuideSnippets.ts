@@ -6,6 +6,9 @@ export const snippets = {
 
 import 'dotenv/config';
 
+// If this app is behind one trusted reverse proxy, configure:
+// app.set('trust proxy', 1);
+
 let eventQueue = [];
 let flushTimer = null;
 
@@ -71,7 +74,7 @@ export function securityMonitorMiddleware(req, res, next) {
       status: res.statusCode,
       response_time_ms: duration,
       request_size: Number(req.headers['content-length'] || 0),
-      client_ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress,
+      client_ip: req.ip || req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress,
       user_agent: req.headers['user-agent'] || 'Unknown',
     });
 
