@@ -7,6 +7,7 @@ import { ThreatStatus } from './types.js';
 import { recorder } from './recorder.js';
 import { normalizePath, extractQueryParamNames } from './normalizer.js';
 import { config } from './config.js';
+import { attachReasoning } from './threatReasoning.js';
 
 export const threatsRouter = express.Router();
 threatsRouter.use(requireDashboardAuth);
@@ -113,7 +114,7 @@ threatsRouter.get('/', (req: Request, res: Response) => {
 
   res.json({
     count: threats.length,
-    threats,
+    threats: attachReasoning(threats, threatEngine.getRules()),
     open_summary: openSummary,
   });
 });
@@ -141,7 +142,7 @@ threatsRouter.patch('/:id/status', (req: Request, res: Response) => {
   res.json({
     success: true,
     message: `Threat marked as ${status}.`,
-    threat: updated,
+    threat: attachReasoning([updated], threatEngine.getRules())[0],
   });
 });
 

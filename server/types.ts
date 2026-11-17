@@ -119,6 +119,17 @@ export interface ThreatRecord {
   milestone_100_alerted?: boolean;
 }
 
+export interface ThreatReasoning {
+  headline: string;
+  what_happened: string;
+  why_flagged: Array<{ label: string; observed?: number; limit?: number }>;
+  risk: string;
+  confidence: 'low' | 'medium' | 'high';
+  likely_false_positive: string;
+  recommended_actions: Array<{ label: string; detail: string; priority: 1 | 2 | 3; copy?: 'client_ip' }>;
+  owasp: { tag: string; plain: string };
+}
+
 export interface PlatformSettings {
   mode: 'shadow' | 'alert_only';
   notify_on_high_critical: boolean;
