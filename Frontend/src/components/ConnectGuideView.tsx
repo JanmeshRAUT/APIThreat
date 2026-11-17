@@ -229,8 +229,15 @@ export function ConnectGuideView({
                   <p className="text-slate-600">{currentGuideSetup.install}</p>
                 </div>
                 <div>
-                  <div className="font-bold text-slate-800 mb-1">Turn it on in your main server file</div>
-                  <p className="text-slate-600">{currentGuideSetup.main}</p>
+                  <div className="p-4 bg-amber-50 border-2 border-amber-400 rounded-lg shadow-sm ring-2 ring-amber-100">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-extrabold tracking-wide">
+                        MAIN STEP
+                      </span>
+                      <div className="font-bold text-amber-950">Turn it on in your main server file</div>
+                    </div>
+                    <p className="text-amber-900">{currentGuideSetup.main}</p>
+                  </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between gap-3 mb-1">
