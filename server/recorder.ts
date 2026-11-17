@@ -3,6 +3,8 @@ import readline from 'readline';
 import { TrafficRecord, TelemetryStats } from './types.js';
 import { config } from './config.js';
 import { ruleToLabel } from './normalizer.js';
+import { TrafficRecordModel } from './models.js';
+import { isDatabaseConnected } from './db.js';
 
 class TrafficRecorder {
   private inMemoryRecords: TrafficRecord[] = [];
@@ -11,11 +13,15 @@ class TrafficRecorder {
   private logFilePath: string;
   private startedAt: string;
 
-  constructor(maxRecords: number = 5000, logFilePath: string = config.trafficLogPath) {
+  constructor(maxRecords: number = 5000, logFilePath: string = '') {
     this.maxRecords = maxRecords;
     this.logFilePath = logFilePath;
     this.startedAt = new Date().toISOString();
     this.initPreload();
+  }
+  public hydrate(records: TrafficRecord[]): void {
+    this.totalRecordedCount = records.length;
+    this.inMemoryRecords = records.slice(-this.maxRecords).map((record) => this.ensureLabels(record));
   }
 
   /**
@@ -42,7 +48,7 @@ class TrafficRecorder {
    */
   private async initPreload() {
     try {
-      if (!fs.existsSync(this.logFilePath)) {
+      if (!this.logFilePath || isDatabaseConnected()) {
         return;
       }
 
@@ -88,7 +94,8 @@ class TrafficRecorder {
     setImmediate(async () => {
       try {
         const line = JSON.stringify(labeledRecord) + '\n';
-        await fs.promises.appendFile(this.logFilePath, line, 'utf8');
+        if (isDatabaseConnected()) await TrafficRecordModel.create(labeledRecord);
+        else if (this.logFilePath) await fs.promises.appendFile(this.logFilePath, line, 'utf8');
       } catch (err) {
         console.error('[Gatekeeper] Background disk write error to traffic.jsonl:', err);
       }
@@ -105,7 +112,9 @@ class TrafficRecorder {
     if (this.inMemoryRecords.length > this.maxRecords) {
       this.inMemoryRecords.shift();
     }
-    if (persistToDisk) {
+    if (persistToDisk && isDatabaseConnected()) {
+      void TrafficRecordModel.create(labeledRecord).catch((err: unknown) => console.error('[Gatekeeper] MongoDB traffic write error:', err));
+    } else if (persistToDisk && this.logFilePath) {
       try {
         fs.appendFileSync(this.logFilePath, JSON.stringify(labeledRecord) + '\n', 'utf8');
       } catch (err) {
@@ -148,7 +157,14 @@ class TrafficRecorder {
     }
 
     try {
-      if (fs.existsSync(targetFilePath)) {
+      if (isDatabaseConnected() && (!targetFilePath || targetFilePath === this.logFilePath)) {
+        void TrafficRecordModel.updateMany(
+          { app_id: threat.app_id, client_ip: threat.client_ip, $or: [{ threat_rule_id: threat.rule_id }, { threat_rule: threat.rule_name }, { label: mlLabel }] },
+          { $set: { label: 'normal', label_source: 'human', threat_rule: 'normal' } }
+        ).catch((err: unknown) => console.error('[Gatekeeper] MongoDB traffic correction error:', err));
+        return correctedCount;
+      }
+      if (targetFilePath && fs.existsSync(targetFilePath)) {
         const raw = fs.readFileSync(targetFilePath, 'utf8');
         const lines = raw.split('\n').filter((l) => l.trim().length > 0);
         let fileChanged = false;
@@ -210,7 +226,19 @@ class TrafficRecorder {
     }
 
     try {
-      if (fs.existsSync(targetFilePath)) {
+      if (isDatabaseConnected() && (!targetFilePath || targetFilePath === this.logFilePath)) {
+        void TrafficRecordModel.deleteMany({ timestamp: { $lt: new Date(cutoffMs).toISOString() } }).catch((err: unknown) => console.error('[Gatekeeper] MongoDB traffic cleanup error:', err));
+        removed += this.inMemoryRecords.filter((r) => {
+          const ts = new Date(r.timestamp).getTime();
+          return !isNaN(ts) && ts < cutoffMs;
+        }).length;
+        this.inMemoryRecords = this.inMemoryRecords.filter((r) => {
+          const ts = new Date(r.timestamp).getTime();
+          return isNaN(ts) || ts >= cutoffMs;
+        });
+        return { removed, kept: Math.max(0, this.inMemoryRecords.length) };
+      }
+      if (targetFilePath && fs.existsSync(targetFilePath)) {
         const raw = fs.readFileSync(targetFilePath, 'utf8');
         const lines = raw.split('\n').filter((l) => l.trim().length > 0);
         const keptLines: string[] = [];
@@ -360,4 +388,4 @@ class TrafficRecorder {
   }
 }
 
-export const recorder = new TrafficRecorder(config.maxInMemoryRecords, config.trafficLogPath);
+export const recorder = new TrafficRecorder(config.maxInMemoryRecords);

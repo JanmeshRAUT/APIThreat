@@ -19,8 +19,10 @@ expects one Railway/Render proxy hop.
 
 Build with `npm run build` and start with `npm start`. Railway and Render
 provide `PORT`; configure `ALLOWED_ORIGINS`, `ADMIN_USER`, and a strong
-`ADMIN_PASS`. Set `DATA_DIR` to the mounted persistent-volume path, such as
-`/data`, and mount a persistent volume there.
+`ADMIN_PASS`. Set the required `MONGODB_URI` to your MongoDB Atlas connection string
+(URL-encode special characters in the password). `DATA_DIR` is no longer used
+for runtime storage; the default JSON files are read only to seed empty MongoDB
+collections on first boot.
 
 Run a **single instance**. Threat counters and session tokens are held in
 memory and are not coordinated between instances.

@@ -1,9 +1,9 @@
-import fs from 'fs';
 import crypto from 'crypto';
 import { config } from './config.js';
+import { AlertHistoryModel } from './models.js';
+import { isDatabaseConnected } from './db.js';
 import { AlertHistoryEntry, PlatformSettings, ThreatRecord, ThreatSeverity } from './types.js';
 
-const ALERT_HISTORY_FILE = config.alertsHistoryFilePath;
 const MAX_HISTORY_ENTRIES = 500;
 const WEBHOOK_TIMEOUT_MS = 3000;
 const MAX_RETRIES = 2; // 1 initial attempt + up to 2 retries = 3 total attempts
@@ -21,29 +21,13 @@ class AlertService {
   private lastAlertSentAt = new Map<string, number>();
 
   constructor() {
-    this.loadHistory();
   }
-
-  private loadHistory(): void {
-    try {
-      if (fs.existsSync(ALERT_HISTORY_FILE)) {
-        const raw = fs.readFileSync(ALERT_HISTORY_FILE, 'utf8');
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          this.history = list.slice(0, MAX_HISTORY_ENTRIES);
-        }
-      }
-    } catch (err) {
-      console.warn('[AlertService] Could not load alerts_history.json:', err);
-    }
+  public hydrate(history: AlertHistoryEntry[]): void {
+    this.history = history.slice(0, MAX_HISTORY_ENTRIES);
   }
 
   private saveHistory(): void {
-    try {
-      fs.writeFileSync(ALERT_HISTORY_FILE, JSON.stringify(this.history, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[AlertService] Failed to save alerts_history.json:', err);
-    }
+    if (isDatabaseConnected()) void AlertHistoryModel.deleteMany({}).then(() => AlertHistoryModel.insertMany(this.history)).catch((err: unknown) => console.error('[AlertService] Failed to save alert history:', err));
   }
 
   /**

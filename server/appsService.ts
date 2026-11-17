@@ -1,225 +1,72 @@
 import crypto from 'crypto';
-import fs from 'fs';
 import { KeyRotation, RegisteredApp } from './types.js';
-import { config } from './config.js';
-
-const APPS_FILE = config.appsFilePath;
+import { AppModel } from './models.js';
+import { isDatabaseConnected } from './db.js';
 
 class AppsService {
-  private apps: Map<string, RegisteredApp> = new Map();
-  private rateLimits: Map<string, { count: number; resetAt: number }> = new Map();
+  private apps = new Map<string, RegisteredApp>();
+  private rateLimits = new Map<string, { count: number; resetAt: number }>();
   private maxRequestsPerMinute = 1200;
 
-  constructor() {
-    this.loadFromDisk();
+  public hydrate(apps: RegisteredApp[]): void {
+    this.apps = new Map(apps.map((app) => [app.id, { ...app, key_history: app.key_history || [] }]));
   }
-
-  private hashKey(key: string): string {
-    return crypto.createHash('sha256').update(key.trim()).digest('hex');
+  private hashKey(key: string): string { return crypto.createHash('sha256').update(key.trim()).digest('hex'); }
+  private persist(app: RegisteredApp): void {
+    if (isDatabaseConnected()) void AppModel.replaceOne({ id: app.id }, app, { upsert: true }).catch((err: unknown) => console.error('[AppsService] MongoDB write failed:', err));
   }
-
-  private loadFromDisk() {
-    try {
-      if (fs.existsSync(APPS_FILE)) {
-        const raw = fs.readFileSync(APPS_FILE, 'utf8');
-        const list: any[] = JSON.parse(raw);
-        let strippedLegacyPlainKey = false;
-        for (const item of list) {
-          if ('_initialPlainKey' in item) {
-            delete item._initialPlainKey;
-            strippedLegacyPlainKey = true;
-          }
-          this.apps.set(item.id, {
-            ...item,
-            key_history: Array.isArray(item.key_history) ? item.key_history : [],
-          } as RegisteredApp);
-        }
-        if (strippedLegacyPlainKey) {
-          this.saveToDisk();
-        }
-      }
-    } catch (err) {
-      console.warn('[AppsService] Could not load apps.json, starting fresh:', err);
-    }
+  private remove(id: string): void {
+    if (isDatabaseConnected()) void AppModel.deleteOne({ id }).catch((err: unknown) => console.error('[AppsService] MongoDB delete failed:', err));
   }
-
-  private saveToDisk() {
-    try {
-      const list = Array.from(this.apps.values()).map((app) => {
-        const sanitized = { ...app } as any;
-        delete sanitized._initialPlainKey;
-        return sanitized;
-      });
-      fs.writeFileSync(APPS_FILE, JSON.stringify(list, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[AppsService] Failed to save apps to apps.json:', err);
-    }
-  }
-
-  /**
-   * Generates a secure API key with prefix and random entropy
-   */
   public generateApiKey(environment: 'dev' | 'prod' = 'dev'): string {
-    const prefix = environment === 'prod' ? 'sk_live_' : 'sk_test_';
-    const randomEntropy = crypto.randomBytes(24).toString('hex');
-    return `${prefix}${randomEntropy}`;
+    return `${environment === 'prod' ? 'sk_live_' : 'sk_test_'}${crypto.randomBytes(24).toString('hex')}`;
   }
-
-  /**
-   * Register a new application
-   * Returns the app object AND the unhashed plain key (to show once)
-   */
   public registerApp(name: string, environment: 'dev' | 'prod'): { app: RegisteredApp; plainKey: string } {
-    const appId = `app_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     const plainKey = this.generateApiKey(environment);
-    const keyHash = this.hashKey(plainKey);
-    const keyPrefix = `${plainKey.slice(0, 14)}...${plainKey.slice(-6)}`;
-
-    const newApp: RegisteredApp = {
-      id: appId,
-      name: name.trim(),
-      environment,
-      key_prefix: keyPrefix,
-      key_hash: keyHash,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      last_seen_at: null,
-      total_requests: 0,
-      key_history: [],
+    const app: RegisteredApp = {
+      id: `app_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`, name: name.trim(), environment,
+      key_prefix: `${plainKey.slice(0, 14)}...${plainKey.slice(-6)}`, key_hash: this.hashKey(plainKey),
+      status: 'active', created_at: new Date().toISOString(), last_seen_at: null, total_requests: 0, key_history: [],
     };
-
-    this.apps.set(appId, newApp);
-    this.saveToDisk();
-
-    return { app: newApp, plainKey };
-  }
-
-  /**
-   * Regenerate API key for an existing application
-   * Returns the new unhashed plain key (to show once)
-   */
-  public regenerateKey(appId: string): { app: RegisteredApp; plainKey: string } | null {
-    const app = this.apps.get(appId);
-    if (!app) return null;
-
-    const plainKey = this.generateApiKey(app.environment);
-    const keyHash = this.hashKey(plainKey);
-    const keyPrefix = `${plainKey.slice(0, 14)}...${plainKey.slice(-6)}`;
-    const oldKeyPrefix = app.key_prefix;
-
-    app.key_hash = keyHash;
-    app.key_prefix = keyPrefix;
-    const rotation: KeyRotation = {
-      old_key_prefix: oldKeyPrefix,
-      new_key_prefix: keyPrefix,
-      rotated_at: new Date().toISOString(),
-    };
-    app.key_history = [rotation, ...(app.key_history || [])];
-    this.saveToDisk();
-
+    this.apps.set(app.id, app); this.persist(app);
     return { app, plainKey };
   }
-
-  /**
-   * Toggle status between active and disabled
-   */
+  public regenerateKey(appId: string): { app: RegisteredApp; plainKey: string } | null {
+    const app = this.apps.get(appId); if (!app) return null;
+    const plainKey = this.generateApiKey(app.environment);
+    const newPrefix = `${plainKey.slice(0, 14)}...${plainKey.slice(-6)}`;
+    app.key_history = [{ old_key_prefix: app.key_prefix, new_key_prefix: newPrefix, rotated_at: new Date().toISOString() }, ...(app.key_history || [])];
+    app.key_prefix = newPrefix; app.key_hash = this.hashKey(plainKey); this.persist(app);
+    return { app, plainKey };
+  }
   public toggleStatus(appId: string): RegisteredApp | null {
-    const app = this.apps.get(appId);
-    if (!app) return null;
-
-    app.status = app.status === 'active' ? 'disabled' : 'active';
-    this.saveToDisk();
-    return app;
+    const app = this.apps.get(appId); if (!app) return null;
+    app.status = app.status === 'active' ? 'disabled' : 'active'; this.persist(app); return app;
   }
-
-  /**
-   * Delete an application
-   */
   public deleteApp(appId: string): boolean {
-    const deleted = this.apps.delete(appId);
-    if (deleted) {
-      this.saveToDisk();
-    }
-    return deleted;
+    const deleted = this.apps.delete(appId); if (deleted) this.remove(appId); return deleted;
   }
-
-  /**
-   * List all registered applications (without revealing key_hash)
-   */
-  public listApps(): RegisteredApp[] {
-    return Array.from(this.apps.values()).map((app) => ({
-      ...app,
-      key_hash: '[SECURED_HASH]',
-    }));
-  }
-
+  public listApps(): RegisteredApp[] { return Array.from(this.apps.values()).map((app) => ({ ...app, key_hash: '[SECURED_HASH]' })); }
   public getAppById(appId: string): RegisteredApp | null {
-    const app = this.apps.get(appId);
-    if (!app) return null;
-    return { ...app, key_hash: '[SECURED_HASH]' };
+    const app = this.apps.get(appId); return app ? { ...app, key_hash: '[SECURED_HASH]' } : null;
   }
-
-  /**
-   * Authenticate incoming request by API key
-   */
   public authenticateKey(rawKey: string): { authorized: boolean; app?: RegisteredApp; rateLimited?: boolean } {
-    if (!rawKey || typeof rawKey !== 'string') {
-      return { authorized: false };
-    }
-
-    const cleanKey = rawKey.replace(/^Bearer\s+/i, '').trim();
-    const hash = this.hashKey(cleanKey);
-
-    let matchedApp: RegisteredApp | undefined;
-    for (const app of this.apps.values()) {
-      if (app.key_hash === hash) {
-        matchedApp = app;
-        break;
-      }
-    }
-
-    if (!matchedApp || matchedApp.status !== 'active') {
-      return { authorized: false };
-    }
-
-    // Rate Limiting Check (1,200 req/min per key)
-    const now = Date.now();
-    let rl = this.rateLimits.get(hash);
-    if (!rl || now > rl.resetAt) {
-      rl = { count: 1, resetAt: now + 60000 };
-      this.rateLimits.set(hash, rl);
-    } else {
-      rl.count++;
-      if (rl.count > this.maxRequestsPerMinute) {
-        return { authorized: true, app: matchedApp, rateLimited: true };
-      }
-    }
-
-    return { authorized: true, app: matchedApp, rateLimited: false };
+    if (!rawKey || typeof rawKey !== 'string') return { authorized: false };
+    const hash = this.hashKey(rawKey.replace(/^Bearer\s+/i, '').trim());
+    const app = Array.from(this.apps.values()).find((item) => item.key_hash === hash);
+    if (!app || app.status !== 'active') return { authorized: false };
+    const now = Date.now(); let rl = this.rateLimits.get(hash);
+    if (!rl || now > rl.resetAt) { rl = { count: 1, resetAt: now + 60000 }; this.rateLimits.set(hash, rl); }
+    else { rl.count++; if (rl.count > this.maxRequestsPerMinute) return { authorized: true, app, rateLimited: true }; }
+    return { authorized: true, app, rateLimited: false };
   }
-
-  /**
-   * Record traffic ingestion for an app
-   */
   public recordAppTraffic(appId: string, eventCount: number): void {
-    const app = this.apps.get(appId);
-    if (app) {
-      app.total_requests += eventCount;
-      app.last_seen_at = new Date().toISOString();
-      this.saveToDisk();
-    }
+    const app = this.apps.get(appId); if (!app) return;
+    app.total_requests += eventCount; app.last_seen_at = new Date().toISOString(); this.persist(app);
   }
-
-  /**
-   * Get first active registered application (without exposing key hashes or plain keys)
-   */
   public getFirstActiveApp(): { app: RegisteredApp } | null {
     const first = Array.from(this.apps.values()).find((a) => a.status === 'active') || Array.from(this.apps.values())[0];
-    if (!first) return null;
-    return {
-      app: { ...first, key_hash: '[SECURED_HASH]' },
-    };
+    return first ? { app: { ...first, key_hash: '[SECURED_HASH]' } } : null;
   }
 }
-
 export const appsService = new AppsService();

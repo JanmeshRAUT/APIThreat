@@ -1,15 +1,18 @@
-import fs from 'fs';
 import crypto from 'crypto';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { ThreatRule, ThreatRecord, ThreatSeverity, ThreatStatus, PlatformSettings } from './types.js';
 import { alertService } from './alertService.js';
 import { config } from './config.js';
+import { RuleModel, SettingsModel, ThreatModel } from './models.js';
+import { isDatabaseConnected } from './db.js';
 import { recorder } from './recorder.js';
 import { featureService } from './featureService.js';
 import { ruleToLabel } from './normalizer.js';
 
-const RULES_FILE = config.rulesFilePath;
-const SETTINGS_FILE = config.settingsFilePath;
-const THREATS_FILE = config.threatsFilePath;
+const require = createRequire(import.meta.url);
+const defaultRules = require(path.resolve(process.cwd(), 'rules.default.json')) as ThreatRule[];
+const defaultSettings = require(path.resolve(process.cwd(), 'settings.default.json')) as PlatformSettings;
 
 export interface DetectionInput {
   app_id: string;
@@ -52,37 +55,32 @@ class ThreatEngine {
   private newThreatListeners: ((threat: ThreatRecord) => void)[] = [];
 
   constructor() {
-    this.loadRules();
-    this.loadSettings();
-    this.loadThreats();
+    this.rules = new Map(defaultRules.map((rule) => [rule.id, rule]));
+    this.settings = { ...this.settings, ...defaultSettings };
 
     // Auto cleanup old window counters every 60 seconds
     setInterval(() => this.cleanupExpiredCounters(), 60000).unref();
   }
 
+  public hydrate(rules: ThreatRule[], settings: PlatformSettings | null, threats: ThreatRecord[]): void {
+    if (rules.length) this.rules = new Map(rules.map((rule) => [rule.id, rule]));
+    if (settings) this.settings = { ...this.settings, ...settings };
+    this.threats = new Map(threats.map((threat) => [`${threat.app_id}:${threat.client_ip}:${threat.rule_id}`, threat]));
+  }
+
   public loadRules(): ThreatRule[] {
     try {
-      if (fs.existsSync(RULES_FILE)) {
-        const raw = fs.readFileSync(RULES_FILE, 'utf8');
-        const list: ThreatRule[] = JSON.parse(raw);
-        this.rules.clear();
-        for (const r of list) {
-          this.rules.set(r.id, r);
-        }
-      }
+      return Array.from(this.rules.values());
     } catch (err) {
-      console.warn('[ThreatEngine] Could not load rules.json:', err);
+      console.warn('[ThreatEngine] Could not load rules:', err);
     }
     return Array.from(this.rules.values());
   }
 
   public saveRules(): void {
-    try {
-      const list = Array.from(this.rules.values());
-      fs.writeFileSync(RULES_FILE, JSON.stringify(list, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[ThreatEngine] Failed to save rules.json:', err);
-    }
+    if (isDatabaseConnected()) void RuleModel.bulkWrite(Array.from(this.rules.values()).map((rule) => ({
+      updateOne: { filter: { id: rule.id }, update: rule, upsert: true },
+    }))).catch((err: unknown) => console.error('[ThreatEngine] Failed to save rules:', err));
   }
 
   public updateRule(id: string, updates: Partial<ThreatRule>): ThreatRule | null {
@@ -99,9 +97,7 @@ class ThreatEngine {
 
   public loadSettings(): PlatformSettings {
     try {
-      if (fs.existsSync(SETTINGS_FILE)) {
-        const raw = fs.readFileSync(SETTINGS_FILE, 'utf8');
-        const parsed = JSON.parse(raw);
+        const parsed = this.settings;
         this.settings = {
           mode: parsed.mode === 'alert_only' ? 'alert_only' : 'shadow',
           notify_on_high_critical: parsed.notify_on_high_critical !== false,
@@ -112,17 +108,8 @@ class ThreatEngine {
           raw_traffic_retention_days: parsed.raw_traffic_retention_days !== undefined ? Math.max(1, Number(parsed.raw_traffic_retention_days) || 30) : 30,
           feature_retention_days: parsed.feature_retention_days !== undefined ? Math.max(1, Number(parsed.feature_retention_days) || 90) : 90,
         };
-      }
     } catch {
-      this.settings = {
-        mode: 'shadow',
-        notify_on_high_critical: true,
-        alert_webhook_url: '',
-        alert_min_severity: 'high',
-        alert_dedup_minutes: 30,
-        raw_traffic_retention_days: 30,
-        feature_retention_days: 90,
-      };
+      this.settings = { ...this.settings, ...defaultSettings };
     }
     return this.getSettings();
   }
@@ -139,11 +126,7 @@ class ThreatEngine {
       cleanUpdates.feature_retention_days = Math.max(1, Number(cleanUpdates.feature_retention_days) || 90);
     }
     Object.assign(this.settings, cleanUpdates);
-    try {
-      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(this.settings, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[ThreatEngine] Failed to save settings.json:', err);
-    }
+    if (isDatabaseConnected()) void SettingsModel.replaceOne({}, this.settings, { upsert: true }).catch((err: unknown) => console.error('[ThreatEngine] Failed to save settings:', err));
     return this.getSettings();
   }
 
@@ -159,27 +142,13 @@ class ThreatEngine {
   }
 
   private loadThreats(): void {
-    try {
-      if (fs.existsSync(THREATS_FILE)) {
-        const raw = fs.readFileSync(THREATS_FILE, 'utf8');
-        const list: ThreatRecord[] = JSON.parse(raw);
-        for (const t of list) {
-          const key = `${t.app_id}:${t.client_ip}:${t.rule_id}`;
-          this.threats.set(key, t);
-        }
-      }
-    } catch (err) {
-      console.warn('[ThreatEngine] Could not load threats.json:', err);
-    }
+    return;
   }
 
   private saveThreats(): void {
-    try {
-      const list = Array.from(this.threats.values());
-      fs.writeFileSync(THREATS_FILE, JSON.stringify(list, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[ThreatEngine] Failed to save threats.json:', err);
-    }
+    if (isDatabaseConnected()) void ThreatModel.bulkWrite(Array.from(this.threats.values()).map((threat) => ({
+      updateOne: { filter: { id: threat.id }, update: threat, upsert: true },
+    }))).catch((err: unknown) => console.error('[ThreatEngine] Failed to save threats:', err));
   }
 
   /**

@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import fs from 'fs';
 import { recorder } from './recorder.js';
 import { config } from './config.js';
 import { requireDashboardAuth } from './authService.js';
@@ -27,7 +26,6 @@ monitorRouter.get('/records', (req: Request, res: Response) => {
 monitorRouter.get('/config', (_req: Request, res: Response) => {
   res.json({
     port: config.port,
-    trafficLogPath: config.trafficLogPath,
     maxInMemoryRecords: config.maxInMemoryRecords,
   });
 });
@@ -40,11 +38,11 @@ monitorRouter.post('/clear', (_req: Request, res: Response) => {
 
 // GET /api/monitor/export
 monitorRouter.get('/export', (_req: Request, res: Response) => {
-  const filePath = recorder.getLogFilePath();
-  if (fs.existsSync(filePath)) {
+  const records = recorder.getAllRecords();
+  if (records.length) {
     res.setHeader('Content-Disposition', 'attachment; filename="traffic.jsonl"');
     res.setHeader('Content-Type', 'application/x-jsonlines');
-    fs.createReadStream(filePath).pipe(res);
+    res.send(records.map((record) => JSON.stringify(record)).join('\n') + '\n');
   } else {
     res.status(404).json({ error: 'traffic.jsonl file has not been created yet.' });
   }

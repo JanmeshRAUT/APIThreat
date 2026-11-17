@@ -9,10 +9,22 @@ import { exportRouter } from './server/exportApi.js';
 import { featureService } from './server/featureService.js';
 import { threatEngine } from './server/threatEngine.js';
 import { assertSecureProductionConfig, config } from './server/config.js';
+import { connectDatabase, hydrateDatabase, loadCollections } from './server/db.js';
+import { appsService } from './server/appsService.js';
+import { alertService } from './server/alertService.js';
+import { recorder } from './server/recorder.js';
 
 async function bootstrap() {
   console.log('[Gatekeeper] Initializing API Security Monitoring Platform...');
   assertSecureProductionConfig();
+  await connectDatabase();
+  await hydrateDatabase(process.cwd());
+  const stored = await loadCollections();
+  appsService.hydrate(stored.apps);
+  threatEngine.hydrate(stored.rules, stored.settings, stored.threats);
+  recorder.hydrate(stored.traffic);
+  featureService.hydrate(stored.features);
+  alertService.hydrate(stored.alerts);
 
   // Background ML feature extraction and retention cleanup
   featureService.startBackgroundJobs(() => {

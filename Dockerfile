@@ -17,6 +17,7 @@ RUN mkdir -p /app/data && chown -R node:node /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+# Required at runtime: pass MONGODB_URI with your Atlas connection string.
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

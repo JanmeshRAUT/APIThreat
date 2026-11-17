@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import { config, hashClientIp } from './config.js';
 import { recorder } from './recorder.js';
 import { ruleToLabel } from './normalizer.js';
+import { FeatureRowModel } from './models.js';
+import { isDatabaseConnected } from './db.js';
 import {
   FeatureRow,
   FeatureWindowSize,
@@ -30,10 +32,12 @@ class FeatureService {
   private cleanupJobTimer: NodeJS.Timeout | null = null;
   // Track last extracted bucket per (app_id, raw_ip, window_size) so identical idle windows are not duplicated every tick
   private lastExtractedSignature = new Map<string, string>();
+  private storedFeatures: FeatureRow[] = [];
 
-  constructor(featuresLogPath: string = config.featuresLogPath) {
+  constructor(featuresLogPath: string = '') {
     this.featuresLogPath = featuresLogPath;
   }
+  public hydrate(rows: FeatureRow[]): void { this.storedFeatures = rows; }
 
   public getFeaturesFilePath(): string {
     return this.featuresLogPath;
@@ -257,8 +261,13 @@ class FeatureService {
   public appendFeatures(rows: FeatureRow[], targetFilePath: string = this.featuresLogPath): number {
     if (rows.length === 0) return 0;
     try {
-      const lines = rows.map((row) => JSON.stringify(row)).join('\n') + '\n';
-      fs.appendFileSync(targetFilePath, lines, 'utf8');
+      if (isDatabaseConnected() && (!targetFilePath || targetFilePath === this.featuresLogPath)) {
+        this.storedFeatures.push(...rows);
+        void FeatureRowModel.insertMany(rows).catch((err: unknown) => console.error('[FeatureService] MongoDB feature write failed:', err));
+      } else {
+        const lines = rows.map((row) => JSON.stringify(row)).join('\n') + '\n';
+        fs.appendFileSync(targetFilePath, lines, 'utf8');
+      }
       return rows.length;
     } catch (err) {
       console.error('[FeatureService] Failed to append to features.jsonl:', err);
@@ -330,6 +339,16 @@ class FeatureService {
     },
     targetFilePath: string = this.featuresLogPath
   ): FeatureRow[] {
+    if (!targetFilePath || targetFilePath === this.featuresLogPath && isDatabaseConnected()) {
+      let rows = [...this.storedFeatures];
+      if (filters) {
+        if (filters.app_id && filters.app_id !== 'ALL') rows = rows.filter((r) => r.app_id === filters.app_id);
+        if (filters.window_size && filters.window_size !== 'ALL') rows = rows.filter((r) => r.window_size === filters.window_size);
+        if (filters.start_date) rows = rows.filter((r) => new Date(r.timestamp).getTime() >= Date.parse(`${filters.start_date}T00:00:00.000Z`));
+        if (filters.end_date) rows = rows.filter((r) => new Date(r.timestamp).getTime() <= Date.parse(`${filters.end_date}T23:59:59.999Z`));
+      }
+      return rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
     if (!fs.existsSync(targetFilePath)) {
       return [];
     }
@@ -380,6 +399,13 @@ class FeatureService {
     threat: { app_id: string; client_ip: string; rule_id: string; rule_name: string },
     targetFilePath: string = this.featuresLogPath
   ): number {
+    if ((!targetFilePath || targetFilePath === this.featuresLogPath) && isDatabaseConnected()) {
+      const mlLabel = ruleToLabel(threat.rule_id || threat.rule_name);
+      const matches = this.storedFeatures.filter((row) => row.app_id === threat.app_id && (row.client_ip === threat.client_ip || row.client_ip === hashClientIp(threat.client_ip, true)) && (row.label === mlLabel || row.label === threat.rule_name));
+      for (const row of matches) { row.label = 'normal'; row.label_source = 'human'; }
+      if (matches.length) void FeatureRowModel.updateMany({ feature_id: { $in: matches.map((row) => row.feature_id) } }, { $set: { label: 'normal', label_source: 'human' } }).catch((err: unknown) => console.error('[FeatureService] MongoDB feature correction failed:', err));
+      return matches.length;
+    }
     if (!fs.existsSync(targetFilePath)) return 0;
 
     const mlLabel = ruleToLabel(threat.rule_id || threat.rule_name);
@@ -442,7 +468,13 @@ class FeatureService {
     let featuresKept = 0;
 
     try {
-      if (fs.existsSync(featuresFilePath)) {
+      if (!featuresFilePath || featuresFilePath === this.featuresLogPath && isDatabaseConnected()) {
+        const before = this.storedFeatures.length;
+        this.storedFeatures = this.storedFeatures.filter((row) => new Date(row.timestamp).getTime() >= featureCutoffMs || isNaN(new Date(row.timestamp).getTime()));
+        featuresRemoved = before - this.storedFeatures.length;
+        featuresKept = this.storedFeatures.length;
+        void FeatureRowModel.deleteMany({ timestamp: { $lt: new Date(featureCutoffMs).toISOString() } }).catch((err: unknown) => console.error('[FeatureService] MongoDB feature cleanup failed:', err));
+      } else if (fs.existsSync(featuresFilePath)) {
         const raw = fs.readFileSync(featuresFilePath, 'utf8');
         const lines = raw.split('\n').filter((l) => l.trim().length > 0);
         const keptLines: string[] = [];
@@ -474,7 +506,7 @@ class FeatureService {
       console.error('[FeatureService] Feature retention cleanup error:', err);
     }
 
-    const rawResult = recorder.cleanupOlderThanDays(rawTrafficDays, nowMs, trafficFilePath);
+    const rawResult = recorder.cleanupOlderThanDays(rawTrafficDays, nowMs, trafficFilePath || '');
 
     return {
       raw_removed: rawResult.removed,
@@ -573,4 +605,4 @@ class FeatureService {
   }
 }
 
-export const featureService = new FeatureService(config.featuresLogPath);
+export const featureService = new FeatureService();
