@@ -1,4 +1,3 @@
-import fs from 'fs';
 import crypto from 'crypto';
 import { config, hashClientIp } from './config.js';
 import { recorder } from './recorder.js';
@@ -33,6 +32,7 @@ class FeatureService {
   // Track last extracted bucket per (app_id, raw_ip, window_size) so identical idle windows are not duplicated every tick
   private lastExtractedSignature = new Map<string, string>();
   private storedFeatures: FeatureRow[] = [];
+  private isolatedStores = new Map<string, FeatureRow[]>();
 
   constructor(featuresLogPath: string = '') {
     this.featuresLogPath = featuresLogPath;
@@ -256,7 +256,7 @@ class FeatureService {
   }
 
   /**
-   * Append computed feature rows to features.jsonl (append-only).
+   * Append computed feature rows to MongoDB.
    */
   public appendFeatures(rows: FeatureRow[], targetFilePath: string = this.featuresLogPath): number {
     if (rows.length === 0) return 0;
@@ -265,8 +265,7 @@ class FeatureService {
         this.storedFeatures.push(...rows);
         void FeatureRowModel.insertMany(rows).catch((err: unknown) => console.error('[FeatureService] MongoDB feature write failed:', err));
       } else {
-        const lines = rows.map((row) => JSON.stringify(row)).join('\n') + '\n';
-        fs.appendFileSync(targetFilePath, lines, 'utf8');
+        this.isolatedStores.set(targetFilePath, [...(this.isolatedStores.get(targetFilePath) || []), ...rows]);
       }
       return rows.length;
     } catch (err) {
@@ -276,7 +275,7 @@ class FeatureService {
   }
 
   /**
-   * Run feature extraction immediately against recent in-memory records and append to features.jsonl.
+   * Run feature extraction immediately against recent in-memory records and persist to MongoDB.
    */
   public extractAndSaveNow(
     windowEndMs: number = Date.now(),
@@ -328,7 +327,7 @@ class FeatureService {
   }
 
   /**
-   * Read stored feature rows from features.jsonl with optional filters.
+   * Read stored feature rows with optional filters.
    */
   public loadFeatures(
     filters?: {
@@ -349,21 +348,7 @@ class FeatureService {
       }
       return rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
-    if (!fs.existsSync(targetFilePath)) {
-      return [];
-    }
-
-    const raw = fs.readFileSync(targetFilePath, 'utf8');
-    const lines = raw.split('\n').filter((l) => l.trim().length > 0);
-    let rows: FeatureRow[] = [];
-
-    for (const line of lines) {
-      try {
-        rows.push(JSON.parse(line) as FeatureRow);
-      } catch {
-        // Skip malformed lines
-      }
-    }
+    let rows: FeatureRow[] = [...(this.isolatedStores.get(targetFilePath) || [])];
 
     if (filters) {
       if (filters.app_id && filters.app_id !== 'ALL') {
@@ -406,53 +391,26 @@ class FeatureService {
       if (matches.length) void FeatureRowModel.updateMany({ feature_id: { $in: matches.map((row) => row.feature_id) } }, { $set: { label: 'normal', label_source: 'human' } }).catch((err: unknown) => console.error('[FeatureService] MongoDB feature correction failed:', err));
       return matches.length;
     }
-    if (!fs.existsSync(targetFilePath)) return 0;
-
     const mlLabel = ruleToLabel(threat.rule_id || threat.rule_name);
     const hashedIp = hashClientIp(threat.client_ip, true);
     let corrected = 0;
-
-    try {
-      const raw = fs.readFileSync(targetFilePath, 'utf8');
-      const lines = raw.split('\n').filter((l) => l.trim().length > 0);
-      let changed = false;
-
-      const updatedLines = lines.map((line) => {
-        try {
-          const row = JSON.parse(line) as FeatureRow;
-          const matchesApp = row.app_id === threat.app_id;
-          const matchesIp = row.client_ip === threat.client_ip || row.client_ip === hashedIp;
-          const matchesLabel = row.label === mlLabel || row.label === threat.rule_name;
-
-          if (matchesApp && matchesIp && matchesLabel) {
-            row.label = 'normal';
-            row.label_source = 'human';
-            changed = true;
-            corrected++;
-            return JSON.stringify(row);
-          }
-          return line;
-        } catch {
-          return line;
-        }
-      });
-
-      if (changed) {
-        fs.writeFileSync(
-          targetFilePath,
-          updatedLines.join('\n') + (updatedLines.length > 0 ? '\n' : ''),
-          'utf8'
-        );
+    const rows = this.isolatedStores.get(targetFilePath) || [];
+    for (const row of rows) {
+      const matchesApp = row.app_id === threat.app_id;
+      const matchesIp = row.client_ip === threat.client_ip || row.client_ip === hashedIp;
+      const matchesLabel = row.label === mlLabel || row.label === threat.rule_name;
+      if (matchesApp && matchesIp && matchesLabel) {
+        row.label = 'normal';
+        row.label_source = 'human';
+        corrected++;
       }
-    } catch (err) {
-      console.error('[FeatureService] Failed to apply false positive label correction to features.jsonl:', err);
     }
 
     return corrected;
   }
 
   /**
-   * Daily retention clean-up across features.jsonl and traffic.jsonl.
+   * Daily retention cleanup across MongoDB collections.
    */
   public runRetentionCleanup(
     rawTrafficDays: number = 30,
@@ -474,33 +432,12 @@ class FeatureService {
         featuresRemoved = before - this.storedFeatures.length;
         featuresKept = this.storedFeatures.length;
         void FeatureRowModel.deleteMany({ timestamp: { $lt: new Date(featureCutoffMs).toISOString() } }).catch((err: unknown) => console.error('[FeatureService] MongoDB feature cleanup failed:', err));
-      } else if (fs.existsSync(featuresFilePath)) {
-        const raw = fs.readFileSync(featuresFilePath, 'utf8');
-        const lines = raw.split('\n').filter((l) => l.trim().length > 0);
-        const keptLines: string[] = [];
-
-        for (const line of lines) {
-          try {
-            const row = JSON.parse(line) as FeatureRow;
-            const ts = new Date(row.timestamp).getTime();
-            if (!isNaN(ts) && ts < featureCutoffMs) {
-              featuresRemoved++;
-            } else {
-              keptLines.push(line);
-            }
-          } catch {
-            // Skip malformed line
-          }
-        }
-
-        featuresKept = keptLines.length;
-        if (featuresRemoved > 0) {
-          fs.writeFileSync(
-            featuresFilePath,
-            keptLines.join('\n') + (keptLines.length > 0 ? '\n' : ''),
-            'utf8'
-          );
-        }
+      } else {
+        const rows = this.isolatedStores.get(featuresFilePath) || [];
+        const keptRows = rows.filter((row) => new Date(row.timestamp).getTime() >= featureCutoffMs || isNaN(new Date(row.timestamp).getTime()));
+        featuresRemoved = rows.length - keptRows.length;
+        featuresKept = keptRows.length;
+        this.isolatedStores.set(featuresFilePath, keptRows);
       }
     } catch (err) {
       console.error('[FeatureService] Feature retention cleanup error:', err);

@@ -266,11 +266,8 @@ test('Step 5 ML Labels, Features, Retention & Export Suite', async (t) => {
       request_id: 'raw_fresh',
       timestamp: new Date(nowMs - 5 * dayMs).toISOString(),
     });
-    fs.writeFileSync(
-      tempTrafficFile,
-      JSON.stringify(oldRaw) + '\n' + JSON.stringify(freshRaw) + '\n',
-      'utf8'
-    );
+    recorder.recordSync(oldRaw, false);
+    recorder.recordSync(freshRaw, false);
 
     // Features: 1 old (120 days) + 1 fresh (10 days)
     const oldFeature = featureService.computeFeatureRow([oldRaw], {
@@ -303,11 +300,7 @@ test('Step 5 ML Labels, Features, Retention & Export Suite', async (t) => {
     assert.equal(cleanupRes.features_removed, 1);
     assert.equal(cleanupRes.features_kept, 1);
 
-    const remainingTraffic = fs
-      .readFileSync(tempTrafficFile, 'utf8')
-      .trim()
-      .split('\n')
-      .map((l) => JSON.parse(l) as TrafficRecord);
+    const remainingTraffic = recorder.getAllRecords().filter((record) => record.request_id.startsWith('raw_'));
     assert.equal(remainingTraffic.length, 1);
     assert.equal(remainingTraffic[0].request_id, 'raw_fresh');
 

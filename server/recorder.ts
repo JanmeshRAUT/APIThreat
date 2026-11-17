@@ -1,5 +1,3 @@
-import fs from 'fs';
-import readline from 'readline';
 import { TrafficRecord, TelemetryStats } from './types.js';
 import { config } from './config.js';
 import { ruleToLabel } from './normalizer.js';
@@ -10,14 +8,11 @@ class TrafficRecorder {
   private inMemoryRecords: TrafficRecord[] = [];
   private totalRecordedCount: number = 0;
   private maxRecords: number;
-  private logFilePath: string;
   private startedAt: string;
 
   constructor(maxRecords: number = 5000, logFilePath: string = '') {
     this.maxRecords = maxRecords;
-    this.logFilePath = logFilePath;
     this.startedAt = new Date().toISOString();
-    this.initPreload();
   }
   public hydrate(records: TrafficRecord[]): void {
     this.totalRecordedCount = records.length;
@@ -44,41 +39,6 @@ class TrafficRecorder {
   }
 
   /**
-   * Preload existing records from traffic.jsonl on startup if the file exists.
-   */
-  private async initPreload() {
-    try {
-      if (!this.logFilePath || isDatabaseConnected()) {
-        return;
-      }
-
-      const fileStream = fs.createReadStream(this.logFilePath, { encoding: 'utf8' });
-      const rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity,
-      });
-
-      const loaded: TrafficRecord[] = [];
-      for await (const line of rl) {
-        if (!line.trim()) continue;
-        try {
-          const record = this.ensureLabels(JSON.parse(line) as TrafficRecord);
-          loaded.push(record);
-          this.totalRecordedCount++;
-        } catch {
-          // Skip corrupted lines
-        }
-      }
-
-      // Keep only the latest `maxRecords`
-      this.inMemoryRecords = loaded.slice(-this.maxRecords);
-      console.log(`[Gatekeeper] Preloaded ${this.inMemoryRecords.length} records from ${this.logFilePath}`);
-    } catch (err) {
-      console.warn('[Gatekeeper] Could not preload traffic.jsonl (starting fresh):', err);
-    }
-  }
-
-  /**
    * Asynchronous, non-blocking recording.
    * Safety rule: If file write fails or is slow, the request is completely unaffected.
    */
@@ -93,9 +53,7 @@ class TrafficRecorder {
 
     setImmediate(async () => {
       try {
-        const line = JSON.stringify(labeledRecord) + '\n';
         if (isDatabaseConnected()) await TrafficRecordModel.create(labeledRecord);
-        else if (this.logFilePath) await fs.promises.appendFile(this.logFilePath, line, 'utf8');
       } catch (err) {
         console.error('[Gatekeeper] Background disk write error to traffic.jsonl:', err);
       }
@@ -103,7 +61,7 @@ class TrafficRecorder {
   }
 
   /**
-   * Synchronous push into in-memory ring buffer & optional immediate disk append (used by tests & simulator).
+   * Synchronous push into the in-memory ring buffer and MongoDB.
    */
   public recordSync(record: TrafficRecord, persistToDisk: boolean = true): TrafficRecord {
     const labeledRecord = this.ensureLabels(record);
@@ -114,12 +72,6 @@ class TrafficRecorder {
     }
     if (persistToDisk && isDatabaseConnected()) {
       void TrafficRecordModel.create(labeledRecord).catch((err: unknown) => console.error('[Gatekeeper] MongoDB traffic write error:', err));
-    } else if (persistToDisk && this.logFilePath) {
-      try {
-        fs.appendFileSync(this.logFilePath, JSON.stringify(labeledRecord) + '\n', 'utf8');
-      } catch (err) {
-        console.error('[Gatekeeper] Sync disk write error to traffic.jsonl:', err);
-      }
     }
     return labeledRecord;
   }
@@ -130,7 +82,7 @@ class TrafficRecorder {
    */
   public markFalsePositiveByThreat(
     threat: { app_id: string; client_ip: string; rule_id: string; rule_name: string },
-    targetFilePath: string = this.logFilePath
+    _targetFilePath?: string
   ): number {
     const mlLabel = ruleToLabel(threat.rule_id || threat.rule_name);
     const matchesThreat = (r: TrafficRecord): boolean => {
@@ -157,44 +109,12 @@ class TrafficRecorder {
     }
 
     try {
-      if (isDatabaseConnected() && (!targetFilePath || targetFilePath === this.logFilePath)) {
+      if (isDatabaseConnected()) {
         void TrafficRecordModel.updateMany(
           { app_id: threat.app_id, client_ip: threat.client_ip, $or: [{ threat_rule_id: threat.rule_id }, { threat_rule: threat.rule_name }, { label: mlLabel }] },
           { $set: { label: 'normal', label_source: 'human', threat_rule: 'normal' } }
         ).catch((err: unknown) => console.error('[Gatekeeper] MongoDB traffic correction error:', err));
         return correctedCount;
-      }
-      if (targetFilePath && fs.existsSync(targetFilePath)) {
-        const raw = fs.readFileSync(targetFilePath, 'utf8');
-        const lines = raw.split('\n').filter((l) => l.trim().length > 0);
-        let fileChanged = false;
-        let fileCorrected = 0;
-
-        const updatedLines = lines.map((line) => {
-          try {
-            const rec = this.ensureLabels(JSON.parse(line) as TrafficRecord);
-            if (matchesThreat(rec)) {
-              rec.label = 'normal';
-              rec.label_source = 'human';
-              rec.threat_rule = 'normal';
-              fileChanged = true;
-              fileCorrected++;
-              return JSON.stringify(rec);
-            }
-            return line;
-          } catch {
-            return line;
-          }
-        });
-
-        if (fileChanged) {
-          fs.writeFileSync(
-            targetFilePath,
-            updatedLines.join('\n') + (updatedLines.length > 0 ? '\n' : ''),
-            'utf8'
-          );
-          if (correctedCount === 0) correctedCount = fileCorrected;
-        }
       }
     } catch (err) {
       console.error('[Gatekeeper] Failed to update false positive labels in traffic.jsonl:', err);
@@ -209,24 +129,22 @@ class TrafficRecorder {
   public cleanupOlderThanDays(
     retentionDays: number,
     nowMs: number = Date.now(),
-    targetFilePath: string = this.logFilePath
+    _targetFilePath?: string
   ): { removed: number; kept: number } {
     const safeDays = Math.max(1, Number(retentionDays) || 30);
     const cutoffMs = nowMs - safeDays * 24 * 60 * 60 * 1000;
     let removed = 0;
     let kept = 0;
 
-    if (targetFilePath === this.logFilePath) {
-      const before = this.inMemoryRecords.length;
-      this.inMemoryRecords = this.inMemoryRecords.filter((r) => {
-        const ts = new Date(r.timestamp).getTime();
-        return isNaN(ts) || ts >= cutoffMs;
-      });
-      removed += before - this.inMemoryRecords.length;
-    }
+    const before = this.inMemoryRecords.length;
+    this.inMemoryRecords = this.inMemoryRecords.filter((r) => {
+      const ts = new Date(r.timestamp).getTime();
+      return isNaN(ts) || ts >= cutoffMs;
+    });
+    removed += before - this.inMemoryRecords.length;
 
     try {
-      if (isDatabaseConnected() && (!targetFilePath || targetFilePath === this.logFilePath)) {
+      if (isDatabaseConnected()) {
         void TrafficRecordModel.deleteMany({ timestamp: { $lt: new Date(cutoffMs).toISOString() } }).catch((err: unknown) => console.error('[Gatekeeper] MongoDB traffic cleanup error:', err));
         removed += this.inMemoryRecords.filter((r) => {
           const ts = new Date(r.timestamp).getTime();
@@ -237,36 +155,6 @@ class TrafficRecorder {
           return isNaN(ts) || ts >= cutoffMs;
         });
         return { removed, kept: Math.max(0, this.inMemoryRecords.length) };
-      }
-      if (targetFilePath && fs.existsSync(targetFilePath)) {
-        const raw = fs.readFileSync(targetFilePath, 'utf8');
-        const lines = raw.split('\n').filter((l) => l.trim().length > 0);
-        const keptLines: string[] = [];
-        let fileRemoved = 0;
-
-        for (const line of lines) {
-          try {
-            const rec = JSON.parse(line) as TrafficRecord;
-            const ts = new Date(rec.timestamp).getTime();
-            if (!isNaN(ts) && ts < cutoffMs) {
-              fileRemoved++;
-            } else {
-              keptLines.push(line);
-            }
-          } catch {
-            // Keep unparseable lines untouched? Safer to drop malformed empty noise
-          }
-        }
-
-        kept = keptLines.length;
-        if (fileRemoved > 0) {
-          fs.writeFileSync(
-            targetFilePath,
-            keptLines.join('\n') + (keptLines.length > 0 ? '\n' : ''),
-            'utf8'
-          );
-          removed = Math.max(removed, fileRemoved);
-        }
       }
     } catch (err) {
       console.error('[Gatekeeper] Raw traffic retention cleanup error:', err);
@@ -384,7 +272,7 @@ class TrafficRecorder {
   }
 
   public getLogFilePath(): string {
-    return this.logFilePath;
+    return '';
   }
 }
 
