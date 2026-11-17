@@ -319,7 +319,7 @@ export const guideSetup = {
       file: 'security-reporter.js in the same folder as your server.js or app.js',
       main: "In server.js/app.js near the top: import { securityMonitorMiddleware } from './security-reporter.js'; Then after creating your Express app: app.use(securityMonitorMiddleware);",
       install: 'Run: npm install dotenv (Node 18 or newer is required for fetch).',
-      env: `MONITOR_URL=http://127.0.0.1:3000
+      env: `MONITOR_URL={{platformUrl}}
 MONITOR_API_KEY={{guideApiKeyPlaceholder}}`,
       note: 'This reports request metadata only; it never reads request bodies, passwords, or query values.',
     },
