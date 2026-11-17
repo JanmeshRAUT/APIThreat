@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import net from 'net';
 import { requireDashboardAuth } from './authService.js';
 import { threatEngine } from './threatEngine.js';
 import { appsService } from './appsService.js';
@@ -8,9 +9,119 @@ import { recorder } from './recorder.js';
 import { normalizePath, extractQueryParamNames } from './normalizer.js';
 import { config } from './config.js';
 import { attachReasoning } from './threatReasoning.js';
+import { PlatformSettings, ThreatRule, ThreatSeverity } from './types.js';
 
 export const threatsRouter = express.Router();
 threatsRouter.use(requireDashboardAuth);
+
+const VALID_SEVERITIES: ThreatSeverity[] = ['low', 'medium', 'high', 'critical'];
+const RULE_PATCH_FIELDS = ['enabled', 'threshold', 'window_seconds', 'severity'] as const;
+const SETTINGS_PATCH_FIELDS = [
+  'mode',
+  'notify_on_high_critical',
+  'description',
+  'alert_webhook_url',
+  'alert_min_severity',
+  'alert_dedup_minutes',
+  'raw_traffic_retention_days',
+  'feature_retention_days',
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function unknownFields(body: Record<string, unknown>, fields: readonly string[]): string[] {
+  return Object.keys(body).filter((key) => !fields.includes(key));
+}
+
+function isPrivateIp(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (normalized === 'localhost' || normalized.endsWith('.localhost')) return true;
+  if (normalized.startsWith('::ffff:')) return isPrivateIp(normalized.slice(7));
+
+  if (net.isIP(normalized) === 4) {
+    const parts = normalized.split('.').map(Number);
+    return parts[0] === 0 || parts[0] === 10 || parts[0] === 127 ||
+      (parts[0] === 169 && parts[1] === 254) ||
+      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      (parts[0] === 192 && parts[1] === 168) ||
+      (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127);
+  }
+
+  if (net.isIP(normalized) === 6) {
+    return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:');
+  }
+  return false;
+}
+
+export function validateWebhookUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(value.trim());
+  } catch {
+    return 'Webhook URL must be a valid URL.';
+  }
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && !isProduction)) {
+    return 'Webhook URL must use HTTPS in production.';
+  }
+  if (parsed.username || parsed.password || isPrivateIp(parsed.hostname)) {
+    return 'Webhook URL must not target localhost or a private IP address.';
+  }
+  return null;
+}
+
+export function validateRulePatch(body: unknown): { updates?: Partial<ThreatRule>; error?: string } {
+  if (!isRecord(body)) return { error: 'Rule updates must be a JSON object.' };
+  const unknown = unknownFields(body, RULE_PATCH_FIELDS);
+  if (unknown.length) return { error: `Unknown rule fields: ${unknown.join(', ')}.` };
+  if (!Object.keys(body).length) return { error: 'At least one rule field is required.' };
+
+  const updates: Partial<ThreatRule> = {};
+  if ('enabled' in body && typeof body.enabled !== 'boolean') return { error: 'enabled must be a boolean.' };
+  if ('threshold' in body && (!Number.isInteger(body.threshold) || Number(body.threshold) < 1)) {
+    return { error: 'threshold must be an integer greater than or equal to 1.' };
+  }
+  if ('window_seconds' in body && (!Number.isInteger(body.window_seconds) || Number(body.window_seconds) < 10 || Number(body.window_seconds) > 86400)) {
+    return { error: 'window_seconds must be an integer between 10 and 86400.' };
+  }
+  if ('severity' in body && !VALID_SEVERITIES.includes(body.severity as ThreatSeverity)) {
+    return { error: `severity must be one of: ${VALID_SEVERITIES.join(', ')}.` };
+  }
+  for (const field of RULE_PATCH_FIELDS) {
+    if (field in body) updates[field] = body[field] as never;
+  }
+  return { updates };
+}
+
+export function validateSettingsPatch(body: unknown): { updates?: Partial<PlatformSettings>; error?: string } {
+  if (!isRecord(body)) return { error: 'Settings updates must be a JSON object.' };
+  const unknown = unknownFields(body, SETTINGS_PATCH_FIELDS);
+  if (unknown.length) return { error: `Unknown settings fields: ${unknown.join(', ')}.` };
+  if (!Object.keys(body).length) return { error: 'At least one settings field is required.' };
+  if ('mode' in body && body.mode !== 'shadow' && body.mode !== 'alert_only') return { error: 'mode must be shadow or alert_only.' };
+  if ('notify_on_high_critical' in body && typeof body.notify_on_high_critical !== 'boolean') return { error: 'notify_on_high_critical must be a boolean.' };
+  if ('description' in body && typeof body.description !== 'string') return { error: 'description must be a string.' };
+  if ('alert_webhook_url' in body && body.alert_webhook_url !== '') {
+    const webhookError = validateWebhookUrl(body.alert_webhook_url);
+    if (webhookError) return { error: webhookError };
+  }
+  if ('alert_min_severity' in body && !VALID_SEVERITIES.includes(body.alert_min_severity as ThreatSeverity)) {
+    return { error: `alert_min_severity must be one of: ${VALID_SEVERITIES.join(', ')}.` };
+  }
+  for (const field of ['alert_dedup_minutes', 'raw_traffic_retention_days', 'feature_retention_days'] as const) {
+    if (field in body && (!Number.isInteger(body[field]) || Number(body[field]) < 0)) {
+      return { error: `${field} must be a non-negative integer.` };
+    }
+  }
+  const updates: Partial<PlatformSettings> = {};
+  for (const field of SETTINGS_PATCH_FIELDS) {
+    if (field in body) updates[field] = body[field] as never;
+  }
+  return { updates };
+}
 
 /**
  * GET /api/threats/alerts/history
@@ -28,6 +139,13 @@ threatsRouter.get('/alerts/history', (req: Request, res: Response) => {
  */
 threatsRouter.post('/alerts/test', async (req: Request, res: Response) => {
   const overrideWebhookUrl = req.body?.webhook_url as string | undefined;
+  if (overrideWebhookUrl) {
+    const webhookError = validateWebhookUrl(overrideWebhookUrl);
+    if (webhookError) {
+      res.status(400).json({ error: webhookError });
+      return;
+    }
+  }
   const settings = threatEngine.getSettings();
   const entry = await alertService.sendTestAlert(settings, overrideWebhookUrl);
 
@@ -57,9 +175,13 @@ threatsRouter.get('/rules', (_req: Request, res: Response) => {
  */
 threatsRouter.patch('/rules/:id', (req: Request, res: Response) => {
   const id = req.params.id;
-  const updates = req.body || {};
+  const validation = validateRulePatch(req.body);
+  if (validation.error) {
+    res.status(400).json({ error: validation.error });
+    return;
+  }
 
-  const updated = threatEngine.updateRule(id, updates);
+  const updated = threatEngine.updateRule(id, validation.updates!);
   if (!updated) {
     res.status(404).json({ error: 'Threat rule not found.' });
     return;
@@ -89,8 +211,12 @@ threatsRouter.get('/settings', (_req: Request, res: Response) => {
  * Update global shadow mode & alert settings
  */
 threatsRouter.patch('/settings', (req: Request, res: Response) => {
-  const updates = req.body || {};
-  const updated = threatEngine.updateSettings(updates);
+  const validation = validateSettingsPatch(req.body);
+  if (validation.error) {
+    res.status(400).json({ error: validation.error });
+    return;
+  }
+  const updated = threatEngine.updateSettings(validation.updates!);
   res.json({
     success: true,
     message: 'Platform security & alert settings updated.',

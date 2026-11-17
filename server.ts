@@ -25,6 +25,19 @@ async function bootstrap() {
 
   const app = express();
   app.set('trust proxy', config.trustProxyHops);
+  app.disable('x-powered-by');
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    res.setHeader('X-XSS-Protection', '0');
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
     .split(',')
     .map((origin) => origin.trim())
@@ -50,21 +63,23 @@ async function bootstrap() {
   // Ingest API
   app.use('/api/v1/ingest', express.json({ limit: '2mb' }), ingestRouter);
 
+  const apiJson = express.json({ limit: '100kb' });
+
   // ML Feature Export & Training Simulator API
-  app.use('/api/v1/export', express.json(), exportRouter);
+  app.use('/api/v1/export', apiJson, exportRouter);
 
   // Threats & Rules Management API
-  app.use('/api/threats', express.json(), threatsRouter);
+  app.use('/api/threats', apiJson, threatsRouter);
 
   // Applications Management API
-  app.use('/api/apps', express.json(), appsRouter);
+  app.use('/api/apps', apiJson, appsRouter);
 
   // Stats and Auth APIs
-  app.use('/api/stats', express.json(), statsRouter);
-  app.use('/api/auth', express.json(), authRouter);
+  app.use('/api/stats', apiJson, statsRouter);
+  app.use('/api/auth', apiJson, authRouter);
 
   // Monitor API
-  app.use('/api/monitor', express.json(), monitorRouter);
+  app.use('/api/monitor', apiJson, monitorRouter);
 
   app.use((err: Error & { status?: number }, _req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (err.message === 'Origin is not allowed by ALLOWED_ORIGINS.') {
