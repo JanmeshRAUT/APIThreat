@@ -127,7 +127,7 @@ export default function App() {
   const [connectionTestKey, setConnectionTestKey] = useState('');
 
   // Host URL for snippets
-  const platformUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const platformUrl = import.meta.env.VITE_API_URL || 'https://apithreat.onrender.com';
 
   // Verify auth session
   useEffect(() => {

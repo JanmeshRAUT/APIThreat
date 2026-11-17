@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_URL ?? '';
+export const API_BASE = import.meta.env.VITE_API_URL ?? 'https://apithreat.onrender.com';
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);

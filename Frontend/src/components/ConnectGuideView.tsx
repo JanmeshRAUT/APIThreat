@@ -80,6 +80,16 @@ export function ConnectGuideView({
               <p className="text-xs text-slate-500 mt-0.5">
                 Follow the steps for one registered app and one language at a time. The reporter sends request metadata in the background.
               </p>
+              <p className="text-xs text-slate-500 mt-2">
+                Dashboard:{' '}
+                <a className="text-blue-600 hover:underline" href="https://api-threat.vercel.app/" target="_blank" rel="noreferrer">
+                  https://api-threat.vercel.app/
+                </a>
+                {' · '}API and monitoring endpoint:{' '}
+                <a className="text-blue-600 hover:underline" href="https://apithreat.onrender.com" target="_blank" rel="noreferrer">
+                  https://apithreat.onrender.com
+                </a>
+              </p>
             </div>
 
             {/* Application selector and setup steps */}
