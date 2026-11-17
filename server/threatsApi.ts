@@ -112,8 +112,9 @@ export function validateSettingsPatch(body: unknown): { updates?: Partial<Platfo
     return { error: `alert_min_severity must be one of: ${VALID_SEVERITIES.join(', ')}.` };
   }
   for (const field of ['alert_dedup_minutes', 'raw_traffic_retention_days', 'feature_retention_days'] as const) {
-    if (field in body && (!Number.isInteger(body[field]) || Number(body[field]) < 0)) {
-      return { error: `${field} must be a non-negative integer.` };
+    const minimum = field === 'alert_dedup_minutes' ? 0 : 1;
+    if (field in body && (!Number.isInteger(body[field]) || Number(body[field]) < minimum)) {
+      return { error: `${field} must be an integer greater than or equal to ${minimum}.` };
     }
   }
   const updates: Partial<PlatformSettings> = {};

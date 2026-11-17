@@ -12,6 +12,8 @@ npm run dev
 The API listens on `PORT` (default `3000`). Set `ALLOWED_ORIGINS` to a
 comma-separated list of frontend origins, for example
 `http://localhost:5173,https://dashboard.example.com`.
+Set `TRUST_PROXY_HOPS=0` for direct local development; the default `1`
+expects one Railway/Render proxy hop.
 
 ## Deployment
 
