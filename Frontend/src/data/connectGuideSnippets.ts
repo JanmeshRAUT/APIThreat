@@ -341,7 +341,7 @@ MONITOR_API_KEY={{guideApiKeyPlaceholder}}`,
       install: 'Spring Boot 3 / Spring MVC is required. No extra dependency is needed when spring-boot-starter-web is already present.',
       env: `monitor.url={{platformUrl}}
 monitor.apiKey={{guideApiKeyPlaceholder}}`,
-      note: 'Create monitoring.properties beside your JAR (or in the folder where you run the app). Add server.forward-headers-strategy=framework to application.properties so deployed requests report the real client IP. Never commit monitoring.properties.',
+      note: 'Example local path: my-store-api/monitoring.properties (next to pom.xml). Example deployed path: deploy/my-store-api.jar and deploy/monitoring.properties. It does not go in src/main/resources. Add server.forward-headers-strategy=framework to application.properties so deployed requests report the real client IP. Never commit monitoring.properties.',
     },
     php: {
       file: 'security-reporter.php and monitoring.env in the same folder as your front controller (often public/index.php)',
