@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getClientIp, authenticateAdminWithRateLimit, clearLoginRateLimitsForTesting } from '../server/authService.js';
-import { config } from '../server/config.js';
+import { config, isWeakAdminPassword } from '../server/config.js';
 
 test('Login rate limiting ignores spoofed X-Forwarded-For values', () => {
   clearLoginRateLimitsForTesting();
@@ -29,4 +29,11 @@ test('Login rate limiting ignores spoofed X-Forwarded-For values', () => {
     Date.now() + 5
   );
   assert.equal(result.blocked, true);
+});
+
+test('Admin password policy rejects weak and blocked values', () => {
+  for (const password of ['', 'admin123', 'admin', 'password', 'change-me', 'changeme', 'test', '123456', 'short-value']) {
+    assert.equal(isWeakAdminPassword(password), true, password);
+  }
+  assert.equal(isWeakAdminPassword('unique-long-admin-secret'), false);
 });

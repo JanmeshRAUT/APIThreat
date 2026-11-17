@@ -36,13 +36,19 @@ for (const [target, seed] of [
 }
 
 export function isWeakAdminPassword(pass: string = adminPass): boolean {
-  return !pass || pass === 'admin123' || pass.length < 8;
+  const normalized = pass.trim().toLowerCase();
+  const blockedPasswords = new Set(['admin123', 'admin', 'password', 'change-me', 'changeme', 'test', '123456']);
+  return !normalized || normalized.length < 12 || blockedPasswords.has(normalized);
 }
 
 export function assertSecureProductionConfig(): void {
-  if (process.env.NODE_ENV === 'production' && adminPass === 'admin123') {
-    throw new Error('ADMIN_PASS must be changed from the default value in production.');
+  if (!isWeakAdminPassword()) return;
+
+  const message = 'ADMIN_PASS must be a unique password with at least 12 characters and not use a blocked default.';
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(message);
   }
+  console.warn(`[Gatekeeper] Warning: ${message}`);
 }
 
 export function hashClientIp(
