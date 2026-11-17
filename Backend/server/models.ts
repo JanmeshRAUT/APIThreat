@@ -7,6 +7,7 @@ import {
   ThreatRecord,
   ThreatRule,
   TrafficRecord,
+  UserRecord,
 } from './types.js';
 
 const schemaOptions = { versionKey: false, strict: true, id: false, timestamps: false } as any;
@@ -60,3 +61,14 @@ export const SettingsModel = mongoose.models.Settings || mongoose.model<Platform
   alert_min_severity: String, alert_dedup_minutes: Number, raw_traffic_retention_days: Number,
   feature_retention_days: Number,
 }, schemaOptions));
+
+export const UserModel = mongoose.models.User || mongoose.model<UserRecord>('User', new Schema({
+  id: { type: String, required: true, unique: true },
+  full_name: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password_hash: { type: String, required: true },
+  role: { type: String, required: true, enum: ['admin', 'member'], default: 'member' },
+  status: { type: String, required: true, enum: ['pending', 'active', 'disabled'], default: 'pending' },
+  created_at: { type: String, required: true },
+  last_login_at: { type: String, default: null },
+}, schemaOptions).index({ email: 1 }, { unique: true }));

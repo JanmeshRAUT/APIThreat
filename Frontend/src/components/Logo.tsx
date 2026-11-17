@@ -12,131 +12,48 @@ export const Logo: React.FC<LogoProps> = ({
   showText = false,
 }) => {
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      {/* Flat single-color mark in accent color */}
       <svg
-        viewBox="0 0 512 512"
+        viewBox="0 0 32 32"
         width={size}
         height={size}
-        className="shrink-0 drop-shadow-sm"
+        className="shrink-0"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
       >
-        <defs>
-          <linearGradient id="logoShieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3B82F6" />
-            <stop offset="50%" stopColor="#1D4ED8" />
-            <stop offset="100%" stopColor="#0F172A" />
-          </linearGradient>
-
-          <linearGradient id="logoCyanGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38BDF8" />
-            <stop offset="100%" stopColor="#06B6D4" />
-          </linearGradient>
-
-          <linearGradient id="logoAccentBeam" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#93C5FD" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.3" />
-          </linearGradient>
-        </defs>
-
-        {/* Outer Hex-Shield Body */}
+        {/* Hexagonal frame */}
         <path
-          d="M256 36 L432 108 C432 272 360 396 256 468 C152 396 80 272 80 108 Z"
-          fill="url(#logoShieldGrad)"
-          stroke="#60A5FA"
-          strokeWidth="10"
-          strokeLinejoin="round"
+          d="M16 2 L28 8.5 L28 23.5 L16 30 L4 23.5 L4 8.5 Z"
+          fill="#0d9488"
         />
-
-        {/* Inner Shield Trim Line */}
-        <path
-          d="M256 68 L404 130 C404 268 340 376 256 436 C172 376 108 268 108 130 Z"
-          fill="none"
-          stroke="url(#logoAccentBeam)"
-          strokeWidth="5"
-          strokeDasharray="14 8"
-          opacity="0.8"
-        />
-
-        {/* Left Gate Pylon */}
-        <path
-          d="M184 190 L220 190 L220 310 L184 310 L160 250 Z"
-          fill="#1E293B"
-          stroke="#38BDF8"
-          strokeWidth="6"
-          strokeLinejoin="round"
-        />
-
-        {/* Right Gate Pylon */}
-        <path
-          d="M328 190 L292 190 L292 310 L328 310 L352 250 Z"
-          fill="#1E293B"
-          stroke="#38BDF8"
-          strokeWidth="6"
-          strokeLinejoin="round"
-        />
-
-        {/* Central Telemetry Pulse Radar Rings */}
-        <circle
-          cx="256"
-          cy="250"
-          r="76"
-          fill="none"
-          stroke="#38BDF8"
-          strokeWidth="4"
-          strokeDasharray="12 6"
-          opacity="0.5"
-        />
-        <circle
-          cx="256"
-          cy="250"
-          r="54"
-          fill="none"
-          stroke="#60A5FA"
-          strokeWidth="5"
-          opacity="0.65"
-        />
-
-        {/* Core Nexus */}
-        <circle cx="256" cy="250" r="28" fill="url(#logoCyanGlow)" />
-        <circle cx="256" cy="250" r="14" fill="#FFFFFF" />
-
-        {/* Telemetry Sensor Nodes */}
-        <circle cx="256" cy="136" r="11" fill="#38BDF8" />
-        <line
-          x1="256"
-          y1="148"
-          x2="256"
-          y2="222"
-          stroke="#38BDF8"
-          strokeWidth="5"
-          strokeDasharray="6 4"
-          opacity="0.85"
-        />
-
-        <circle cx="256" cy="370" r="9" fill="#38BDF8" />
-        <line
-          x1="256"
-          y1="278"
-          x2="256"
-          y2="361"
-          stroke="#38BDF8"
-          strokeWidth="5"
-          strokeDasharray="6 4"
-          opacity="0.85"
-        />
-
-        <circle cx="160" cy="250" r="7" fill="#60A5FA" />
-        <circle cx="352" cy="250" r="7" fill="#60A5FA" />
+        {/* Grid pattern representing API traffic */}
+        <line x1="10" y1="12" x2="22" y2="12" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="10" y1="16" x2="22" y2="16" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="10" y1="20" x2="22" y2="20" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        {/* Node dots */}
+        <circle cx="10" cy="12" r="1.5" fill="white" />
+        <circle cx="22" cy="16" r="1.5" fill="white" />
+        <circle cx="10" cy="20" r="1.5" fill="white" />
+        {/* Active pulse */}
+        <circle cx="22" cy="12" r="2" fill="white" fillOpacity="0.4" />
+        <circle cx="22" cy="12" r="1" fill="white" />
       </svg>
 
       {showText && (
-        <div className="flex flex-col">
-          <span className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
-            Gatekeeper <span className="text-blue-600">Security</span>
+        <div className="flex flex-col leading-none">
+          <span
+            className="font-bold text-slate-900 tracking-tight"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14 }}
+          >
+            Gatekeeper
           </span>
-          <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase">
-            Central Ingest Platform
+          <span
+            className="font-mono text-slate-500 uppercase tracking-widest"
+            style={{ fontSize: 9 }}
+          >
+            API Security
           </span>
         </div>
       )}

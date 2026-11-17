@@ -2,6 +2,31 @@
  * Multi-Tenant API Security Ingestion & Dashboard Data Types
  */
 
+export type UserRole = 'admin' | 'member';
+export type UserStatus = 'pending' | 'active' | 'disabled';
+export type RegistrationMode = 'approval' | 'open' | 'closed';
+
+export interface UserRecord {
+  id: string;
+  full_name: string;
+  email: string;
+  password_hash: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface SafeUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at: string;
+  last_login_at: string | null;
+}
+
 export interface RegisteredApp {
   id: string;
   name: string;

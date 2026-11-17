@@ -3,6 +3,8 @@ import crypto from 'crypto';
 
 dotenv.config();
 
+export type RegistrationMode = 'approval' | 'open' | 'closed';
+
 const port = parseInt(process.env.PORT || '3000', 10);
 const maxInMemoryRecords = parseInt(process.env.MAX_IN_MEMORY_RECORDS || '5000', 10);
 const trustProxyHops = Math.max(0, parseInt(process.env.TRUST_PROXY_HOPS || '1', 10) || 0);
@@ -14,6 +16,24 @@ const ipHashSalt = process.env.IP_HASH_SALT || crypto.randomBytes(16).toString('
 const appUrl = process.env.APP_URL && process.env.APP_URL !== 'MY_APP_URL'
   ? process.env.APP_URL.replace(/\/$/, '')
   : 'https://api-threat.vercel.app';
+
+function parseRegistrationMode(val?: string): RegistrationMode {
+  const normalized = (val || '').trim().toLowerCase();
+  if (normalized === 'open' || normalized === 'closed') {
+    return normalized;
+  }
+  return 'approval';
+}
+
+let registrationMode: RegistrationMode = parseRegistrationMode(process.env.REGISTRATION_MODE);
+
+export function getRegistrationMode(): RegistrationMode {
+  return registrationMode;
+}
+
+export function setRegistrationModeForTesting(mode: RegistrationMode): void {
+  registrationMode = mode;
+}
 
 export function isWeakAdminPassword(pass: string = adminPass): boolean {
   const normalized = pass.trim().toLowerCase();
@@ -51,4 +71,7 @@ export const config = {
   hashIps,
   ipHashSalt,
   appUrl,
+  get registrationMode(): RegistrationMode {
+    return getRegistrationMode();
+  },
 };

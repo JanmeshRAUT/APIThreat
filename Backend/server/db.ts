@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { AppModel, AlertHistoryModel, FeatureRowModel, RuleModel, SettingsModel, ThreatModel, TrafficRecordModel } from './models.js';
-import { RegisteredApp, ThreatRecord, ThreatRule, PlatformSettings, AlertHistoryEntry, FeatureRow, TrafficRecord } from './types.js';
+import { AppModel, AlertHistoryModel, FeatureRowModel, RuleModel, SettingsModel, ThreatModel, TrafficRecordModel, UserModel } from './models.js';
+import { RegisteredApp, ThreatRecord, ThreatRule, PlatformSettings, AlertHistoryEntry, FeatureRow, TrafficRecord, UserRecord } from './types.js';
 
 let connected = false;
 
@@ -39,19 +39,20 @@ export async function hydrateDatabase(dataRoot: string): Promise<void> {
 export async function loadCollections(): Promise<{
   apps: RegisteredApp[]; threats: ThreatRecord[]; traffic: TrafficRecord[]; features: FeatureRow[];
   alerts: AlertHistoryEntry[]; rules: ThreatRule[]; settings: PlatformSettings | null;
+  users: UserRecord[];
 }> {
   const withoutMongoId = <T extends { _id?: unknown }>(items: T[]): Omit<T, '_id'>[] =>
     items.map(({ _id: _ignored, ...item }) => item);
-  const [apps, threats, traffic, features, alerts, rules, settings] = await Promise.all([
+  const [apps, threats, traffic, features, alerts, rules, settings, users] = await Promise.all([
     AppModel.find().lean(), ThreatModel.find().lean(), TrafficRecordModel.find().sort({ timestamp: 1 }).lean(),
     FeatureRowModel.find().sort({ timestamp: 1 }).lean(), AlertHistoryModel.find().sort({ timestamp: -1 }).limit(500).lean(),
-    RuleModel.find().lean(), SettingsModel.findOne().lean(),
+    RuleModel.find().lean(), SettingsModel.findOne().lean(), UserModel.find().lean(),
   ]);
   const cleanSettings = settings ? (({ _id: _ignored, ...item }) => item)(settings) : null;
   return { apps: withoutMongoId(apps) as RegisteredApp[], threats: withoutMongoId(threats) as ThreatRecord[],
     traffic: withoutMongoId(traffic) as TrafficRecord[], features: withoutMongoId(features) as FeatureRow[],
     alerts: withoutMongoId(alerts) as AlertHistoryEntry[], rules: withoutMongoId(rules) as ThreatRule[],
-    settings: cleanSettings as PlatformSettings | null };
+    settings: cleanSettings as PlatformSettings | null, users: withoutMongoId(users) as UserRecord[] };
 }
 
 export async function closeDatabase(): Promise<void> {

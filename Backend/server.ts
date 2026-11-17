@@ -13,6 +13,7 @@ import { connectDatabase, hydrateDatabase, loadCollections } from './server/db.j
 import { appsService } from './server/appsService.js';
 import { alertService } from './server/alertService.js';
 import { recorder } from './server/recorder.js';
+import { userService } from './server/userService.js';
 
 async function bootstrap() {
   console.log('[Gatekeeper] Initializing API Security Monitoring Platform...');
@@ -25,6 +26,7 @@ async function bootstrap() {
   recorder.hydrate(stored.traffic);
   featureService.hydrate(stored.features);
   alertService.hydrate(stored.alerts);
+  userService.hydrate(stored.users);
 
   // Background ML feature extraction and retention cleanup
   featureService.startBackgroundJobs(() => {
