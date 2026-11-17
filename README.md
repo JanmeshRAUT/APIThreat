@@ -1,32 +1,25 @@
-# API Security Backend
+# API Security
 
-Always-on Express API for the API Security Monitoring Platform.
+This repository contains the two application parts used by the project:
 
-## Local development
+- `Backend/` - the Express API and MongoDB storage layer.
+- `Frontend/` - the Vite web application.
 
-```bash
+## Vercel
+
+The repository root is configured for Vercel. Vercel builds `Frontend/` and
+serves its generated `Frontend/dist/` output. Set `VITE_API_URL` in the
+Vercel project environment to the deployed backend URL.
+
+## Backend
+
+Run backend commands from `Backend/`:
+
+```powershell
 npm install
-npm run dev
+npm run build
+npm run lint
+npm test
 ```
 
-The API listens on `PORT` (default `3000`). Set `ALLOWED_ORIGINS` to a
-comma-separated list of frontend origins, for example
-`http://localhost:5173,https://dashboard.example.com`.
-Set `TRUST_PROXY_HOPS=0` for direct local development; the default `1`
-expects one Railway/Render proxy hop.
-
-## Deployment
-
-Build with `npm run build` and start with `npm start`. Railway and Render
-provide `PORT`; configure `ALLOWED_ORIGINS`, `ADMIN_USER`, and a strong
-`ADMIN_PASS`. Set the required `MONGODB_URI` to your MongoDB Atlas connection string
-(URL-encode special characters in the password). The default JSON files are
-read only to seed empty MongoDB collections on first boot.
-
-Run a **single instance**. Threat counters and session tokens are held in
-memory and are not coordinated between instances.
-
-## Data
-
-`rules.default.json` and `settings.default.json` seed empty MongoDB collections
-on first boot. Runtime data is stored entirely in MongoDB.
+The backend requires `MONGODB_URI`; see `Backend/.env.example`.
