@@ -65,6 +65,14 @@ async function bootstrap() {
   // Monitor API
   app.use('/api/monitor', express.json(), monitorRouter);
 
+  app.use((err: Error & { status?: number }, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err.message === 'Origin is not allowed by ALLOWED_ORIGINS.') {
+      res.status(403).json({ error: err.message });
+      return;
+    }
+    next(err);
+  });
+
   app.listen(config.port, '0.0.0.0', () => {
     console.log(`[Gatekeeper] Ready! API listening on port ${config.port}`);
   });
