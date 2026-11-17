@@ -22,6 +22,7 @@ test('Login rate limiting ignores spoofed X-Forwarded-For values', () => {
     headers: { 'x-forwarded-for': '203.0.113.2' },
   };
   assert.equal(getClientIp(spoofedRequest), socketIp);
+  assert.equal(getClientIp({ ip: '::1', socket: { remoteAddress: '::1' } } as any), '127.0.0.1');
   const result = authenticateAdminWithRateLimit(
     config.adminUser,
     'wrong-password',

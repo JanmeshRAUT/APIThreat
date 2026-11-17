@@ -57,6 +57,14 @@ export function normalizePath(rawPath: string): string {
   return '/' + normalizedSegments.join('/');
 }
 
+export function normalizeClientIp(rawIp: string | undefined | null): string {
+  const ip = String(rawIp || '').trim();
+  if (!ip) return '127.0.0.1';
+  if (ip === '::1') return '127.0.0.1';
+  if (ip.toLowerCase().startsWith('::ffff:')) return ip.slice(7);
+  return ip;
+}
+
 /**
  * Extracts ONLY query parameter names (keys), never their values.
  * Ensures that sensitive search queries, filter tokens, or credentials in URLs are never saved.

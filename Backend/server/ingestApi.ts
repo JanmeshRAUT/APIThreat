@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import crypto from 'crypto';
 import { appsService } from './appsService.js';
 import { recorder } from './recorder.js';
-import { normalizePath, extractQueryParamNames, determineLoginResult } from './normalizer.js';
+import { normalizePath, extractQueryParamNames, determineLoginResult, normalizeClientIp } from './normalizer.js';
 import { threatEngine } from './threatEngine.js';
 import { TrafficRecord, IngestEvent } from './types.js';
 
@@ -73,7 +73,7 @@ ingestRouter.post('/', (req: Request, res: Response) => {
     try {
       appsService.recordAppTraffic(app.id, batch.length);
 
-      const fallbackIp = req.ip || req.socket?.remoteAddress || '127.0.0.1';
+      const fallbackIp = normalizeClientIp(req.ip || req.socket?.remoteAddress);
 
       const fallbackUa = (req.headers['user-agent'] as string) || 'Unknown Client';
 
@@ -94,6 +94,7 @@ ingestRouter.post('/', (req: Request, res: Response) => {
         }
 
         const loginResult = ev.login_result || determineLoginResult(normalized, statusCode);
+        const clientIp = ev.client_ip ? normalizeClientIp(String(ev.client_ip)) : fallbackIp;
 
         let isoTimestamp = new Date().toISOString();
         if (ev.timestamp) {
@@ -109,7 +110,7 @@ ingestRouter.post('/', (req: Request, res: Response) => {
         const detection = threatEngine.evaluateDetailed({
           app_id: app.id,
           app_name: app.name,
-          client_ip: ev.client_ip ? String(ev.client_ip).trim() : fallbackIp,
+          client_ip: clientIp,
           method: (ev.method || 'GET').toUpperCase(),
           raw_path_and_query: fullPath,
           status_code: statusCode,
@@ -125,7 +126,7 @@ ingestRouter.post('/', (req: Request, res: Response) => {
           app_name: app.name,
           environment: app.environment,
           timestamp: isoTimestamp,
-          client_ip: ev.client_ip ? String(ev.client_ip).trim() : fallbackIp,
+          client_ip: clientIp,
           method: (ev.method || 'GET').toUpperCase(),
           path: pathOnly,
           normalized_path: normalized,

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import { config, isWeakAdminPassword } from './config.js';
+import { normalizeClientIp } from './normalizer.js';
 
 interface Session {
   username: string;
@@ -23,7 +24,7 @@ const LOGIN_REQUEST_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_REQUESTS_PER_WINDOW = 30;
 
 export function getClientIp(req: Request): string {
-  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
+  return normalizeClientIp(req.ip || req.socket?.remoteAddress);
 }
 
 export function loginRequestRateLimit(req: Request, res: Response, next: NextFunction): void {
