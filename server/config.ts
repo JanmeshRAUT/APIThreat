@@ -15,6 +15,7 @@ const threatsFilePath = path.join(dataDir, 'threats.json');
 const appsFilePath = path.join(dataDir, 'apps.json');
 const alertsHistoryFilePath = path.join(dataDir, 'alerts_history.json');
 const maxInMemoryRecords = parseInt(process.env.MAX_IN_MEMORY_RECORDS || '5000', 10);
+const trustProxyHops = Math.max(0, parseInt(process.env.TRUST_PROXY_HOPS || '1', 10) || 0);
 const adminUser = process.env.ADMIN_USER || 'admin';
 const adminPass = process.env.ADMIN_PASS || 'admin123';
 const alertWebhookUrl = process.env.ALERT_WEBHOOK_URL || '';
@@ -56,6 +57,7 @@ export function hashClientIp(
 
 export const config = {
   port,
+  trustProxyHops,
   dataDir,
   trafficLogPath,
   featuresLogPath,

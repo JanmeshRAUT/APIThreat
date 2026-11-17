@@ -22,13 +22,8 @@ const loginRequestRateLimits = new Map<string, { count: number; windowStartedAt:
 const LOGIN_REQUEST_WINDOW_MS = 60 * 1000;
 const MAX_LOGIN_REQUESTS_PER_WINDOW = 30;
 
-function getClientIp(req: Request): string {
-  return (
-    ((req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) ||
-    req.ip ||
-    req.socket?.remoteAddress ||
-    '127.0.0.1'
-  );
+export function getClientIp(req: Request): string {
+  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 }
 
 export function loginRequestRateLimit(req: Request, res: Response, next: NextFunction): void {

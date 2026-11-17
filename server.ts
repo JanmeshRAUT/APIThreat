@@ -24,6 +24,7 @@ async function bootstrap() {
   });
 
   const app = express();
+  app.set('trust proxy', config.trustProxyHops);
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
     .split(',')
     .map((origin) => origin.trim())

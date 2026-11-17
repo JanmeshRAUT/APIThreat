@@ -73,10 +73,7 @@ ingestRouter.post('/', (req: Request, res: Response) => {
     try {
       appsService.recordAppTraffic(app.id, batch.length);
 
-      const fallbackIp =
-        ((req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) ||
-        req.socket?.remoteAddress ||
-        '127.0.0.1';
+      const fallbackIp = req.ip || req.socket?.remoteAddress || '127.0.0.1';
 
       const fallbackUa = (req.headers['user-agent'] as string) || 'Unknown Client';
 
