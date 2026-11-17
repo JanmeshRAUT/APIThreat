@@ -13,7 +13,7 @@ const hashIps = process.env.HASH_IPS === 'true';
 const ipHashSalt = process.env.IP_HASH_SALT || crypto.randomBytes(16).toString('hex');
 const appUrl = process.env.APP_URL && process.env.APP_URL !== 'MY_APP_URL'
   ? process.env.APP_URL.replace(/\/$/, '')
-  : `http://localhost:${port}`;
+  : 'https://api-threat.vercel.app';
 
 export function isWeakAdminPassword(pass: string = adminPass): boolean {
   const normalized = pass.trim().toLowerCase();
