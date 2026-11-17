@@ -144,7 +144,7 @@ class SecurityMonitorMiddleware(BaseHTTPMiddleware):
             asyncio.create_task(flush_batch())
 
         return response`,
-    java: `// Java Spring Boot 3 / Spring MVC filter
+    java: `// Spring Boot 3 / Spring MVC only (not a universal Java SE integration)
 // File: src/main/java/com/yourcompany/security/SecurityMonitorFilter.java
 package com.yourcompany.security;
 
@@ -229,6 +229,7 @@ public class SecurityMonitorFilter extends OncePerRequestFilter {
             event.put("path", path);
             event.put("status", response.getStatus());
             event.put("response_time_ms", duration);
+            // With server.forward-headers-strategy=framework, this is the original client IP.
             event.put("client_ip", request.getRemoteAddr());
             event.put("user_agent", request.getHeader("User-Agent"));
 
@@ -335,12 +336,12 @@ MONITOR_API_KEY={{guideApiKeyPlaceholder}}`,
       note: 'This reports request metadata only; it never reads request bodies, passwords, or query values.',
     },
     java: {
-      file: 'SecurityMonitorFilter.java in your Spring Boot source package, plus monitoring.properties in your project root (the same folder where you run the jar)',
-      main: 'The @Component annotation turns the filter on automatically. Add the file to your Spring Boot source package. Create monitoring.properties in your project\'s root folder (the same folder you run the jar from), with monitor.url=... and monitor.apiKey=... Delete this file to turn monitoring off.',
-      install: 'Use Spring Boot 3 (Java 11+). Your existing spring-boot-starter-web already provides ObjectMapper.',
+      file: 'Create src/main/java/com/yourcompany/security/SecurityMonitorFilter.java',
+      main: 'MAIN STEP: Paste the filter code into that file. Keep package com.yourcompany.security, or change it to your own package. The @Component annotation activates it automatically.',
+      install: 'Spring Boot 3 / Spring MVC is required. No extra dependency is needed when spring-boot-starter-web is already present.',
       env: `monitor.url={{platformUrl}}
 monitor.apiKey={{guideApiKeyPlaceholder}}`,
-      note: 'This reports request metadata only; it never reads request bodies, passwords, or query values. Monitoring reads its own separate config file — it does not use this project\'s normal config/settings and never needs OS-level environment variables set.',
+      note: 'Create monitoring.properties beside your JAR (or in the folder where you run the app). Add server.forward-headers-strategy=framework to application.properties so deployed requests report the real client IP. Never commit monitoring.properties.',
     },
     php: {
       file: 'security-reporter.php and monitoring.env in the same folder as your front controller (often public/index.php)',
