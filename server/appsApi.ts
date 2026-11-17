@@ -1,7 +1,9 @@
 import express, { Request, Response } from 'express';
+import { requireDashboardAuth } from './authService.js';
 import { appsService } from './appsService.js';
 
 export const appsRouter = express.Router();
+appsRouter.use(requireDashboardAuth);
 
 /**
  * GET /api/apps

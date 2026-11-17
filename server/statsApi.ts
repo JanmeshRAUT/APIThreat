@@ -1,10 +1,11 @@
 import express, { Request, Response } from 'express';
 import { calculateDashboardStats } from './statsService.js';
-import { authenticateAdminWithRateLimit, verifySessionToken, revokeSessionToken } from './authService.js';
+import { authenticateAdminWithRateLimit, loginRequestRateLimit, requireDashboardAuth, verifySessionToken, revokeSessionToken } from './authService.js';
 import { config, isWeakAdminPassword } from './config.js';
 
 export const statsRouter = express.Router();
 export const authRouter = express.Router();
+statsRouter.use(requireDashboardAuth);
 
 // GET /api/stats - Telemetry metrics endpoint
 statsRouter.get('/', (req: Request, res: Response) => {
@@ -14,7 +15,7 @@ statsRouter.get('/', (req: Request, res: Response) => {
 });
 
 // Auth routes: Login, verify, and logout
-authRouter.post('/login', (req: Request, res: Response) => {
+authRouter.post('/login', loginRequestRateLimit, (req: Request, res: Response) => {
   const { username, password } = req.body || {};
   const clientIp =
     ((req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) ||

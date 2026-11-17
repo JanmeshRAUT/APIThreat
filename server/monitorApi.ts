@@ -2,8 +2,10 @@ import express, { Request, Response } from 'express';
 import fs from 'fs';
 import { recorder } from './recorder.js';
 import { config } from './config.js';
+import { requireDashboardAuth } from './authService.js';
 
 export const monitorRouter = express.Router();
+monitorRouter.use(requireDashboardAuth);
 
 // GET /api/monitor/records
 monitorRouter.get('/records', (req: Request, res: Response) => {

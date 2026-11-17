@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { requireDashboardAuth } from './authService.js';
 import { threatEngine } from './threatEngine.js';
 import { appsService } from './appsService.js';
 import { alertService } from './alertService.js';
@@ -8,6 +9,7 @@ import { normalizePath, extractQueryParamNames } from './normalizer.js';
 import { config } from './config.js';
 
 export const threatsRouter = express.Router();
+threatsRouter.use(requireDashboardAuth);
 
 /**
  * GET /api/threats/alerts/history

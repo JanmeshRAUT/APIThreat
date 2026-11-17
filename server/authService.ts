@@ -18,6 +18,40 @@ const BLOCK_DURATION_MS = 15 * 60 * 1000;
 
 const activeSessions = new Map<string, Session>();
 const loginRateLimits = new Map<string, LoginAttemptState>();
+const loginRequestRateLimits = new Map<string, { count: number; windowStartedAt: number }>();
+const LOGIN_REQUEST_WINDOW_MS = 60 * 1000;
+const MAX_LOGIN_REQUESTS_PER_WINDOW = 30;
+
+function getClientIp(req: Request): string {
+  return (
+    ((req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) ||
+    req.ip ||
+    req.socket?.remoteAddress ||
+    '127.0.0.1'
+  );
+}
+
+export function loginRequestRateLimit(req: Request, res: Response, next: NextFunction): void {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const current = loginRequestRateLimits.get(ip);
+  const state =
+    !current || now - current.windowStartedAt >= LOGIN_REQUEST_WINDOW_MS
+      ? { count: 0, windowStartedAt: now }
+      : current;
+
+  state.count += 1;
+  loginRequestRateLimits.set(ip, state);
+  if (state.count > MAX_LOGIN_REQUESTS_PER_WINDOW) {
+    res.status(429).json({
+      success: false,
+      blocked: true,
+      error: 'Too many login requests. Please try again later.',
+    });
+    return;
+  }
+  next();
+}
 
 export interface LoginAuthResult {
   success: boolean;
@@ -104,6 +138,7 @@ export function authenticateAdminWithRateLimit(
 
 export function clearLoginRateLimitsForTesting(): void {
   loginRateLimits.clear();
+  loginRequestRateLimits.clear();
 }
 
 export function verifySessionToken(token: string | undefined): boolean {
