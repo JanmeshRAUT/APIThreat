@@ -24,3 +24,6 @@ The following types are duplicated and must be kept synchronized manually:
 `FeatureRow`, `LabelSource`, `FeatureWindowSize`, `PlatformSettings`, and
 `AlertHistoryEntry` in `src/types/threats.ts`, plus their backend counterparts
 in `server/types.ts`.
+
+Dashboard API requests use the bearer token stored after login. A `401`
+response clears the token and returns the browser to the login screen.

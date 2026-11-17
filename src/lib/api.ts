@@ -14,7 +14,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 
   if (response.status === 401 && !path.startsWith('/api/auth/')) {
     localStorage.removeItem('gatekeeper_admin_token');
-    window.location.reload();
+    window.location.assign(window.location.pathname);
   }
 
   return response;
