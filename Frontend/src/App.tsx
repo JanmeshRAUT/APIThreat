@@ -731,15 +731,13 @@ export default function App() {
         {/* Global Controls & Actions */}
         <div className="flex items-center gap-2.5">
           {/* Mode Indicator & Settings trigger */}
-          <button
-            onClick={() => setActiveTab('settings')}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors cursor-pointer"
-            title="Open Settings & Alerts Configuration"
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-200"
+            title="Current detection mode"
           >
             <Shield className="w-3.5 h-3.5 text-blue-600" />
             <span>Mode: {platformSettings.mode === 'shadow' ? 'Monitoring only' : 'Alert-Only'}</span>
-            <Sliders className="w-3 h-3 text-blue-500 ml-0.5" />
-          </button>
+          </div>
 
           {/* Auto Refresh Toggle (5s) */}
           <button
