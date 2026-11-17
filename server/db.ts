@@ -40,14 +40,18 @@ export async function loadCollections(): Promise<{
   apps: RegisteredApp[]; threats: ThreatRecord[]; traffic: TrafficRecord[]; features: FeatureRow[];
   alerts: AlertHistoryEntry[]; rules: ThreatRule[]; settings: PlatformSettings | null;
 }> {
+  const withoutMongoId = <T extends { _id?: unknown }>(items: T[]): Omit<T, '_id'>[] =>
+    items.map(({ _id: _ignored, ...item }) => item);
   const [apps, threats, traffic, features, alerts, rules, settings] = await Promise.all([
     AppModel.find().lean(), ThreatModel.find().lean(), TrafficRecordModel.find().sort({ timestamp: 1 }).lean(),
     FeatureRowModel.find().sort({ timestamp: 1 }).lean(), AlertHistoryModel.find().sort({ timestamp: -1 }).limit(500).lean(),
     RuleModel.find().lean(), SettingsModel.findOne().lean(),
   ]);
-  return { apps: apps as RegisteredApp[], threats: threats as ThreatRecord[], traffic: traffic as TrafficRecord[],
-    features: features as FeatureRow[], alerts: alerts as AlertHistoryEntry[], rules: rules as ThreatRule[],
-    settings: settings as PlatformSettings | null };
+  const cleanSettings = settings ? (({ _id: _ignored, ...item }) => item)(settings) : null;
+  return { apps: withoutMongoId(apps) as RegisteredApp[], threats: withoutMongoId(threats) as ThreatRecord[],
+    traffic: withoutMongoId(traffic) as TrafficRecord[], features: withoutMongoId(features) as FeatureRow[],
+    alerts: withoutMongoId(alerts) as AlertHistoryEntry[], rules: withoutMongoId(rules) as ThreatRule[],
+    settings: cleanSettings as PlatformSettings | null };
 }
 
 export async function closeDatabase(): Promise<void> {

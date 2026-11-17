@@ -9,7 +9,7 @@ import {
   TrafficRecord,
 } from './types.js';
 
-const schemaOptions = { _id: false, versionKey: false, strict: true, id: false, timestamps: false } as any;
+const schemaOptions = { versionKey: false, strict: true, id: false, timestamps: false } as any;
 
 export const AppModel = mongoose.models.App || mongoose.model<RegisteredApp>('App', new Schema({
   id: { type: String, required: true, unique: true },
