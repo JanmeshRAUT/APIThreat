@@ -25,12 +25,14 @@ import { apiFetch } from '../lib/api';
 interface ThreatsViewProps {
   apps: Array<{ id: string; name: string }>;
   selectedAppId: string;
+  currentRole?: string | null;
   onSelectApp: (id: string) => void;
   onThreatsUpdated?: () => void;
   initialThreatId?: string | null;
 }
 
-export function ThreatsView({ apps, selectedAppId, onThreatsUpdated, initialThreatId }: ThreatsViewProps) {
+export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThreatsUpdated, initialThreatId }: ThreatsViewProps) {
+  const isAdmin = currentRole === 'admin';
   const [threats, setThreats] = useState<ThreatRecord[]>([]);
   const [alertHistory, setAlertHistory] = useState<AlertHistoryEntry[]>([]);
   const [rules, setRules] = useState<ThreatRule[]>([]);
@@ -677,60 +679,66 @@ export function ThreatsView({ apps, selectedAppId, onThreatsUpdated, initialThre
               </div>
 
               {/* Status Management Actions */}
-              <div className="pt-2 border-t border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Update Status:
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <button
-                    disabled={isUpdatingStatus || inspectThreat.status === 'open'}
-                    onClick={() => handleUpdateStatus(inspectThreat.id, 'open')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                      inspectThreat.status === 'open'
-                        ? 'bg-rose-600 text-white border-rose-600'
-                        : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700'
-                    }`}
-                  >
-                    Open
-                  </button>
+              {isAdmin ? (
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    Update Status:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button
+                      disabled={isUpdatingStatus || inspectThreat.status === 'open'}
+                      onClick={() => handleUpdateStatus(inspectThreat.id, 'open')}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        inspectThreat.status === 'open'
+                          ? 'bg-rose-600 text-white border-rose-600'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700'
+                      }`}
+                    >
+                      Open
+                    </button>
 
-                  <button
-                    disabled={isUpdatingStatus || inspectThreat.status === 'acknowledged'}
-                    onClick={() => handleUpdateStatus(inspectThreat.id, 'acknowledged')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                      inspectThreat.status === 'acknowledged'
-                        ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-50 hover:text-amber-700'
-                    }`}
-                  >
-                    Acknowledged
-                  </button>
+                    <button
+                      disabled={isUpdatingStatus || inspectThreat.status === 'acknowledged'}
+                      onClick={() => handleUpdateStatus(inspectThreat.id, 'acknowledged')}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        inspectThreat.status === 'acknowledged'
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-50 hover:text-amber-700'
+                      }`}
+                    >
+                      Acknowledged
+                    </button>
 
-                  <button
-                    disabled={isUpdatingStatus || inspectThreat.status === 'resolved'}
-                    onClick={() => handleUpdateStatus(inspectThreat.id, 'resolved')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                      inspectThreat.status === 'resolved'
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-white text-slate-700 border-slate-300 hover:bg-emerald-50 hover:text-emerald-700'
-                    }`}
-                  >
-                    Resolved
-                  </button>
+                    <button
+                      disabled={isUpdatingStatus || inspectThreat.status === 'resolved'}
+                      onClick={() => handleUpdateStatus(inspectThreat.id, 'resolved')}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        inspectThreat.status === 'resolved'
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-emerald-50 hover:text-emerald-700'
+                      }`}
+                    >
+                      Resolved
+                    </button>
 
-                  <button
-                    disabled={isUpdatingStatus || inspectThreat.status === 'false_positive'}
-                    onClick={() => handleUpdateStatus(inspectThreat.id, 'false_positive')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                      inspectThreat.status === 'false_positive'
-                        ? 'bg-slate-700 text-white border-slate-700'
-                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    False Positive
-                  </button>
+                    <button
+                      disabled={isUpdatingStatus || inspectThreat.status === 'false_positive'}
+                      onClick={() => handleUpdateStatus(inspectThreat.id, 'false_positive')}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        inspectThreat.status === 'false_positive'
+                          ? 'bg-slate-700 text-white border-slate-700'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                    >
+                      False Positive
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="pt-2 border-t border-slate-200">
+                  <span className="text-xs text-slate-400 italic">Status updates require admin role.</span>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}

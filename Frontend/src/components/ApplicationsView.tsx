@@ -16,6 +16,7 @@ export interface RegisteredApp {
 interface NewKeyModal { appId: string; appName: string; plainKey: string }
 interface ApplicationsViewProps {
   apps: RegisteredApp[];
+  currentRole?: string | null;
   setIsRegisteringApp: (value: boolean) => void;
   handleRegisterApp: (event: React.FormEvent) => void;
   handleRegenerateKey: (app: RegisteredApp) => void;
@@ -34,7 +35,8 @@ interface ApplicationsViewProps {
   closeKeyDialog: () => void;
 }
 
-export function ApplicationsView({ apps, setIsRegisteringApp, handleRegisterApp, handleRegenerateKey, handleToggleStatus, handleDeleteApp, isRegisteringApp, newAppName, setNewAppName, newAppEnv, setNewAppEnv, newKeyModal, isKeyVisible, setIsKeyVisible, copiedKey, setCopiedKey, closeKeyDialog }: ApplicationsViewProps) {
+export function ApplicationsView({ apps, currentRole = 'admin', setIsRegisteringApp, handleRegisterApp, handleRegenerateKey, handleToggleStatus, handleDeleteApp, isRegisteringApp, newAppName, setNewAppName, newAppEnv, setNewAppEnv, newKeyModal, isKeyVisible, setIsKeyVisible, copiedKey, setCopiedKey, closeKeyDialog }: ApplicationsViewProps) {
+  const isAdmin = currentRole === 'admin';
   return (
     <>
 
@@ -48,13 +50,15 @@ export function ApplicationsView({ apps, setIsRegisteringApp, handleRegisterApp,
                 </p>
               </div>
 
-              <button
-                onClick={() => setIsRegisteringApp(true)}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 cursor-pointer transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Register Application</span>
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setIsRegisteringApp(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Register Application</span>
+                </button>
+              )}
             </div>
 
             {/* Applications Table */}
@@ -140,38 +144,42 @@ export function ApplicationsView({ apps, setIsRegisteringApp, handleRegisterApp,
                           </td>
 
                           <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              {/* Regenerate Key */}
-                              <button
-                                onClick={() => handleRegenerateKey(app)}
-                                className="p-1.5 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                                title="Regenerate API Key"
-                              >
-                                <RotateCw className="w-3.5 h-3.5" />
-                              </button>
+                            {isAdmin ? (
+                              <div className="flex items-center justify-center gap-2">
+                                {/* Regenerate Key */}
+                                <button
+                                  onClick={() => handleRegenerateKey(app)}
+                                  className="p-1.5 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                  title="Regenerate API Key"
+                                >
+                                  <RotateCw className="w-3.5 h-3.5" />
+                                </button>
 
-                              {/* Toggle Status */}
-                              <button
-                                onClick={() => handleToggleStatus(app)}
-                                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                                  app.status === 'active'
-                                    ? 'text-slate-500 hover:text-amber-600 hover:bg-amber-50'
-                                    : 'text-emerald-600 hover:bg-emerald-50'
-                                }`}
-                                title={app.status === 'active' ? 'Disable Application' : 'Enable Application'}
-                              >
-                                <Power className="w-3.5 h-3.5" />
-                              </button>
+                                {/* Toggle Status */}
+                                <button
+                                  onClick={() => handleToggleStatus(app)}
+                                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                                    app.status === 'active'
+                                      ? 'text-slate-500 hover:text-amber-600 hover:bg-amber-50'
+                                      : 'text-emerald-600 hover:bg-emerald-50'
+                                  }`}
+                                  title={app.status === 'active' ? 'Disable Application' : 'Enable Application'}
+                                >
+                                  <Power className="w-3.5 h-3.5" />
+                                </button>
 
-                              {/* Delete App */}
-                              <button
-                                onClick={() => handleDeleteApp(app)}
-                                className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                title="Delete Application"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                                {/* Delete App */}
+                                <button
+                                  onClick={() => handleDeleteApp(app)}
+                                  className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Delete Application"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 font-mono text-[11px]">View only</span>
+                            )}
                           </td>
                         </tr>
                       ))

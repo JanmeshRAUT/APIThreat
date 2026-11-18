@@ -45,11 +45,11 @@ export function LoginPage({
       <div>
         <h2
           className="font-bold text-slate-900 mb-1"
-          style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22 }}
+          style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, letterSpacing: '-0.02em' }}
         >
           Sign in
         </h2>
-        <p className="text-sm text-slate-500">Access the security dashboard.</p>
+        <p className="text-slate-500" style={{ fontSize: 13.5 }}>Access the security dashboard.</p>
       </div>
 
       {/* Success notice from registration */}
@@ -193,12 +193,6 @@ export function LoginPage({
       </form>
 
       <div className="flex flex-col gap-3">
-        {/* Admin note */}
-        <p className="text-xs font-mono text-slate-400 leading-relaxed">
-          Admin credentials are set via <code className="bg-slate-100 px-1 rounded text-slate-600">ADMIN_USER</code>{' '}
-          / <code className="bg-slate-100 px-1 rounded text-slate-600">ADMIN_PASS</code> on the server.
-        </p>
-
         {/* Switch view */}
         {registrationOpen && (
           <p className="text-xs text-slate-500">
@@ -206,8 +200,7 @@ export function LoginPage({
             <button
               type="button"
               onClick={onSwitchToRegister}
-              className="text-teal-600 font-semibold hover:underline focus-visible:outline-none"
-              style={{ color: 'var(--color-accent)' }}
+              className="text-blue-600 font-semibold hover:underline focus-visible:outline-none cursor-pointer"
             >
               Register
             </button>

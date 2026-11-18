@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sliders,
   Shield,
@@ -15,27 +15,84 @@ import {
   Trash2,
   Flame,
   Sparkles,
+  Users,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
-import { PlatformSettings, ThreatSeverity, AlertHistoryEntry } from '../types/threats';
+import { PlatformSettings, ThreatSeverity, AlertHistoryEntry, UserAccount } from '../types/threats';
 import { apiFetch } from '../lib/api';
 
 interface SettingsViewProps {
   authToken?: string | null;
+  currentRole?: string | null;
   onSaved?: (settings: PlatformSettings) => void;
   onAlertSent?: () => void;
   selectedAppId?: string;
   onSimulateAttack?: () => Promise<void>;
   onTestingDataGenerated?: () => void;
+  onPendingUsersCountChange?: (count: number) => void;
 }
 
 export function SettingsView({
   authToken,
+  currentRole = 'admin',
   onSaved,
   onAlertSent,
   selectedAppId = 'ALL',
   onSimulateAttack,
   onTestingDataGenerated,
+  onPendingUsersCountChange,
 }: SettingsViewProps) {
+  const isAdmin = currentRole === 'admin';
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userActionError, setUserActionError] = useState<string | null>(null);
+  const [userUpdatingId, setUserUpdatingId] = useState<string | null>(null);
+
+  const fetchUsers = useCallback(async () => {
+    if (!isAdmin || !authToken) return;
+    setUsersLoading(true);
+    try {
+      const res = await apiFetch('/api/auth/users');
+      if (res.ok) {
+        const data = await res.json();
+        const userList: UserAccount[] = data.users || [];
+        setUsers(userList);
+        const pendingCount = userList.filter((u) => u.status === 'pending').length;
+        onPendingUsersCountChange?.(pendingCount);
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [isAdmin, authToken, onPendingUsersCountChange]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleUpdateUserStatus = async (userId: string, newStatus: 'active' | 'disabled') => {
+    setUserUpdatingId(userId);
+    setUserActionError(null);
+    try {
+      const res = await apiFetch(`/api/auth/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        await fetchUsers();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setUserActionError(data.error || 'Failed to update user status.');
+      }
+    } catch (err: any) {
+      setUserActionError(err?.message || 'Failed to update user status.');
+    } finally {
+      setUserUpdatingId(null);
+    }
+  };
   const [settings, setSettings] = useState<PlatformSettings>({
     mode: 'shadow',
     notify_on_high_critical: true,
@@ -218,14 +275,139 @@ export function SettingsView({
           )}
           <button
             type="submit"
-            disabled={isSaving}
+            disabled={isSaving || !isAdmin}
             className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            title={!isAdmin ? 'Read-only access' : undefined}
           >
             <Check className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>
           </button>
         </div>
       </div>
+
+      {/* ADMIN-ONLY SECTION: USER MANAGEMENT */}
+      {isAdmin && (
+        <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">User Accounts</h3>
+                <p className="text-xs text-slate-500">
+                  Manage registered users and pending account approvals
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-mono text-slate-500">
+              {users.length} {users.length === 1 ? 'user' : 'users'}
+            </span>
+          </div>
+
+          <div className="p-5 flex flex-col gap-4 text-xs">
+            {userActionError && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{userActionError}</span>
+              </div>
+            )}
+
+            {usersLoading ? (
+              <div className="py-8 text-center text-slate-400">Loading user accounts...</div>
+            ) : users.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                No registered member accounts found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                      <th className="py-2.5 px-3">Name</th>
+                      <th className="py-2.5 px-3">Email</th>
+                      <th className="py-2.5 px-3">Role</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Created</th>
+                      <th className="py-2.5 px-3">Last Login</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {users.map((user) => {
+                      const isUpdating = userUpdatingId === user.id;
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 font-medium text-slate-900">{user.full_name}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600">{user.email}</td>
+                          <td className="py-2.5 px-3 font-mono">
+                            <span className="capitalize px-1.5 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                user.status === 'active'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : user.status === 'pending'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}
+                            >
+                              {user.status}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
+                            {user.last_login_at
+                              ? new Date(user.last_login_at).toLocaleDateString()
+                              : 'Never'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            {user.status === 'pending' && (
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => handleUpdateUserStatus(user.id, 'active')}
+                                className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                              >
+                                {isUpdating ? 'Approving...' : 'Approve'}
+                              </button>
+                            )}
+                            {user.status === 'active' && (
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => handleUpdateUserStatus(user.id, 'disabled')}
+                                className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                              >
+                                {isUpdating ? 'Disabling...' : 'Disable'}
+                              </button>
+                            )}
+                            {user.status === 'disabled' && (
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => handleUpdateUserStatus(user.id, 'active')}
+                                className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                              >
+                                {isUpdating ? 'Enabling...' : 'Re-enable'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* SECTION 1: ALERTS CONFIGURATION */}
       <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
@@ -464,8 +646,9 @@ export function SettingsView({
           <button
             type="button"
             onClick={() => void onSimulateAttack?.()}
-            disabled={!onSimulateAttack}
+            disabled={!onSimulateAttack || !isAdmin}
             className="px-3.5 py-2 font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            title={!isAdmin ? 'Admin access required' : undefined}
           >
             <Flame className="w-3.5 h-3.5 text-rose-600" />
             <span>Attack Simulator</span>
@@ -473,8 +656,9 @@ export function SettingsView({
           <button
             type="button"
             onClick={() => void handleGenerateSampleData()}
-            disabled={isGeneratingSampleData || !authToken}
+            disabled={isGeneratingSampleData || !authToken || !isAdmin}
             className="px-3.5 py-2 font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            title={!isAdmin ? 'Admin access required' : undefined}
           >
             <Sparkles className={`w-3.5 h-3.5 text-blue-600 ${isGeneratingSampleData ? 'animate-pulse' : ''}`} />
             <span>{isGeneratingSampleData ? 'Generating Samples...' : 'Generate sample training data'}</span>
@@ -503,8 +687,9 @@ export function SettingsView({
           <button
             type="button"
             onClick={handleRunCleanupNow}
-            disabled={isRunningCleanup || !authToken}
+            disabled={isRunningCleanup || !authToken || !isAdmin}
             className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            title={!isAdmin ? 'Admin access required' : undefined}
           >
             <Trash2 className="w-3.5 h-3.5 text-slate-500" />
             <span>{isRunningCleanup ? 'Cleaning...' : 'Run cleanup now'}</span>

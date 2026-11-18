@@ -90,3 +90,13 @@ export interface OpenThreatsSummary {
   low: number;
   total: number;
 }
+
+export interface UserAccount {
+  id: string;
+  full_name: string;
+  email: string;
+  role: 'admin' | 'member';
+  status: 'pending' | 'active' | 'disabled';
+  created_at: string;
+  last_login_at: string | null;
+}

@@ -137,11 +137,11 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
       <div>
         <h2
           className="font-bold text-slate-900 mb-1"
-          style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22 }}
+          style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, letterSpacing: '-0.02em' }}
         >
           Create account
         </h2>
-        <p className="text-sm text-slate-500">Get access to the security dashboard.</p>
+        <p className="text-slate-500" style={{ fontSize: 13.5 }}>Get access to the security dashboard.</p>
       </div>
 
       {errors.general && (
@@ -309,8 +309,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
         <button
           type="button"
           onClick={() => onSwitchToLogin()}
-          className="font-semibold hover:underline focus-visible:outline-none"
-          style={{ color: 'var(--color-accent)' }}
+          className="text-blue-600 font-semibold hover:underline focus-visible:outline-none cursor-pointer"
         >
           Sign in
         </button>

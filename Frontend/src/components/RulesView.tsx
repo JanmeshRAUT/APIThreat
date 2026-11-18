@@ -16,7 +16,12 @@ import {
 import { ThreatRule, ThreatSeverity } from '../types/threats';
 import { apiFetch } from '../lib/api';
 
-export function RulesView() {
+interface RulesViewProps {
+  currentRole?: string | null;
+}
+
+export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
+  const isAdmin = currentRole === 'admin';
   const [rules, setRules] = useState<ThreatRule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [editingThreshold, setEditingThreshold] = useState<{ [ruleId: string]: number }>({});
@@ -171,12 +176,16 @@ export function RulesView() {
 
                   {/* Toggle Switch */}
                   <button
+                    disabled={!isAdmin}
                     onClick={() => handleToggleRule(rule)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                      isEnabled
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-slate-200 text-slate-600 border-slate-300'
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
+                      !isAdmin
+                        ? 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-500 border-slate-200'
+                        : isEnabled
+                        ? 'bg-blue-600 text-white border-blue-600 cursor-pointer'
+                        : 'bg-slate-200 text-slate-600 border-slate-300 cursor-pointer'
                     }`}
+                    title={!isAdmin ? 'Admin role required to modify rules' : undefined}
                   >
                     <span>{isEnabled ? 'ENABLED' : 'DISABLED'}</span>
                   </button>
@@ -212,6 +221,7 @@ export function RulesView() {
                       type="number"
                       min={1}
                       max={1000}
+                      disabled={!isAdmin}
                       value={currentVal}
                       onChange={(e) =>
                         setEditingThreshold((prev) => ({
@@ -219,9 +229,9 @@ export function RulesView() {
                           [rule.id]: Math.max(1, parseInt(e.target.value) || 1),
                         }))
                       }
-                      className="w-16 px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+                      className="w-16 px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 disabled:opacity-60"
                     />
-                    {hasChanged && (
+                    {isAdmin && hasChanged && (
                       <button
                         onClick={() => handleSaveThreshold(rule.id)}
                         className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer"

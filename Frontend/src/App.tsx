@@ -51,6 +51,9 @@ import { RegisteredApp } from './components/ApplicationsView';
 import { DashboardStats, TrafficRecord } from './components/DashboardView';
 import { ThreatRecord, PlatformSettings, OpenThreatsSummary } from './types/threats';
 import { apiFetch } from './lib/api';
+import { AuthLayout } from './components/auth/AuthLayout';
+import { LoginPage } from './components/auth/LoginPage';
+import { RegisterPage } from './components/auth/RegisterPage';
 
 export default function App() {
   // Navigation: 'dashboard' | 'threats' | 'rules' | 'applications' | 'guide' | 'ml' | 'settings'
@@ -82,11 +85,18 @@ export default function App() {
   // Authentication State
   const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem('gatekeeper_admin_token'));
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const [currentFullName, setCurrentFullName] = useState<string | null>(null);
   const [weakAdminPassword, setWeakAdminPassword] = useState<boolean>(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginNotice, setLoginNotice] = useState<{ type: 'pending' | 'disabled' | 'success'; message: string } | null>(null);
+  const [loginSuccessPrefill, setLoginSuccessPrefill] = useState<string | undefined>(undefined);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [registrationMode, setRegistrationMode] = useState<'open' | 'approval' | 'closed'>('approval');
+  const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
 
   // Applications & Multi-Tenant State
   const [apps, setApps] = useState<RegisteredApp[]>([]);
@@ -129,6 +139,24 @@ export default function App() {
   // Host URL for snippets
   const platformUrl = import.meta.env.VITE_API_URL || 'https://apithreat.onrender.com';
 
+  // Fetch registration mode config on load
+  useEffect(() => {
+    async function fetchAuthConfig() {
+      try {
+        const res = await apiFetch('/api/auth/config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.registration) {
+            setRegistrationMode(data.registration);
+          }
+        }
+      } catch {
+        // Default to approval on error
+      }
+    }
+    fetchAuthConfig();
+  }, []);
+
   // Verify auth session
   useEffect(() => {
     async function verifyAuth() {
@@ -140,10 +168,15 @@ export default function App() {
         const data = await res.json();
         if (data.authenticated) {
           setCurrentUser(data.user?.username || 'admin');
+          setCurrentRole(data.user?.role || 'admin');
+          setCurrentFullName(data.user?.full_name || null);
           setWeakAdminPassword(Boolean(data.weak_admin_password));
         } else {
           localStorage.removeItem('gatekeeper_admin_token');
           setAuthToken(null);
+          setCurrentUser(null);
+          setCurrentRole(null);
+          setCurrentFullName(null);
         }
       } catch {
       }
@@ -288,6 +321,7 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    setLoginNotice(null);
     setIsLoggingIn(true);
 
     try {
@@ -305,9 +339,25 @@ export default function App() {
         localStorage.setItem('gatekeeper_admin_token', data.token);
         setAuthToken(data.token);
         setCurrentUser(data.user?.username || loginUsername);
+        setCurrentRole(data.user?.role || 'admin');
+        setCurrentFullName(data.user?.full_name || null);
         setWeakAdminPassword(Boolean(data.weak_admin_password));
+      } else if (res.status === 403) {
+        if (data.code === 'pending') {
+          setLoginNotice({
+            type: 'pending',
+            message: 'Your account is waiting for administrator approval.',
+          });
+        } else if (data.code === 'disabled') {
+          setLoginNotice({
+            type: 'disabled',
+            message: data.error || 'Your account has been disabled. Contact an administrator.',
+          });
+        } else {
+          setLoginError(data.error || 'Access forbidden.');
+        }
       } else {
-        setLoginError(data.error || 'Invalid credentials. Check ADMIN_USER and ADMIN_PASS environment variables.');
+        setLoginError(data.error || 'Invalid credentials.');
       }
     } catch (err: any) {
       setLoginError(err.message || 'Unable to connect to authentication server.');
@@ -330,6 +380,8 @@ export default function App() {
     localStorage.removeItem('gatekeeper_admin_token');
     setAuthToken(null);
     setCurrentUser(null);
+    setCurrentRole(null);
+    setCurrentFullName(null);
   };
 
   // Register New App
@@ -531,83 +583,45 @@ export default function App() {
 
   // Code Snippets for Connect Guide
   // ----------------------------------------------------
-  // LOGIN SCREEN (If not authenticated)
+  // AUTH SCREENS (If not authenticated)
   // ----------------------------------------------------
   if (!authToken) {
+    const showRegister = registrationMode !== 'closed';
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-slate-900 antialiased">
-        <div className="w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-lg shadow-slate-200/50 p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Logo size={44} className="w-11 h-11" />
-            <div>
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight">API Security Platform</h1>
-              <p className="text-xs text-slate-500">Central Monitoring & Telemetry Ingest</p>
-            </div>
-          </div>
-
-          <div className="mb-6 p-3.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-900">
-            <div className="font-semibold text-blue-950 mb-1 flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-blue-600" />
-              <span>Admin Authentication</span>
-            </div>
-            <p className="text-blue-700/90 leading-relaxed">
-              Authenticate using credentials configured via <code className="font-mono bg-blue-100/60 px-1 rounded">ADMIN_USER</code> and <code className="font-mono bg-blue-100/60 px-1 rounded">ADMIN_PASS</code>.
-            </p>
-          </div>
-
-          {loginError && (
-            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{loginError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Admin Username
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  required
-                  value={loginUsername}
-                  onChange={(e) => setLoginUsername(e.target.value)}
-                  placeholder="Enter username"
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none text-slate-900"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Admin Password
-              </label>
-              <div className="relative">
-                <Key className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="password"
-                  required
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none text-slate-900"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full py-2.5 px-4 mt-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 rounded-lg transition-colors shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Lock className="w-4 h-4" />
-              <span>{isLoggingIn ? 'Verifying...' : 'Sign In to Platform'}</span>
-            </button>
-          </form>
-        </div>
-      </div>
+      <AuthLayout
+        side={authView}
+        showRegister={showRegister}
+        onSwitchToLogin={() => setAuthView('login')}
+        onSwitchToRegister={() => setAuthView('register')}
+        formContent={
+          authView === 'login' ? (
+            <LoginPage
+              loginUsername={loginUsername}
+              setLoginUsername={setLoginUsername}
+              loginPassword={loginPassword}
+              setLoginPassword={setLoginPassword}
+              loginError={loginError}
+              loginNotice={loginNotice}
+              isLoggingIn={isLoggingIn}
+              handleLogin={handleLogin}
+              onSwitchToRegister={() => setAuthView('register')}
+              registrationOpen={showRegister}
+              successPrefill={loginSuccessPrefill}
+            />
+          ) : (
+            <RegisterPage
+              onSwitchToLogin={(prefillEmail, successMsg) => {
+                if (prefillEmail) setLoginUsername(prefillEmail);
+                if (successMsg) {
+                  setLoginNotice({ type: 'success', message: successMsg });
+                  setLoginSuccessPrefill(prefillEmail);
+                }
+                setAuthView('login');
+              }}
+            />
+          )
+        }
+      />
     );
   }
 
@@ -621,114 +635,103 @@ export default function App() {
         <div className="p-5 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <Logo size={36} className="w-9 h-9" />
-            <div>
-              <div className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-2">
-                <span>Gatekeeper Security Platform</span>
-                <span className="text-xs font-mono font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  CENTRAL INGEST
-                </span>
-              </div>
-              <div className="text-xs text-slate-500">
-                Ingest API: <code className="font-mono text-blue-600">POST /api/v1/ingest</code>
-              </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
+                Gatekeeper <span className="text-blue-600">Security</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase">
+                Central Ingest Platform
+              </span>
             </div>
           </div>
         </div>
-        <nav aria-label="Primary navigation" className="flex flex-col gap-1 p-4 text-xs">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'dashboard'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Dashboard</span>
-            </button>
+        <nav aria-label="Primary navigation" className="flex flex-col gap-4 p-4 text-xs">
+          {/* Section: Monitor */}
+          <div>
+            <div className="nav-section-label" style={{ color: 'var(--color-slate-400)', letterSpacing: '0.05em' }}>Monitor</div>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={activeTab === 'dashboard' ? 'nav-item-active' : 'nav-item'}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('threats')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'threats'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-              <span>Threats</span>
-              {stats?.open_threats_by_severity && stats.open_threats_by_severity.total > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-xs font-bold bg-rose-600 text-white leading-none">
-                  {stats.open_threats_by_severity.total}
-                </span>
-              )}
-            </button>
+              <button
+                onClick={() => setActiveTab('threats')}
+                className={activeTab === 'threats' ? 'nav-item-active' : 'nav-item'}
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span className="flex-1 text-left">Threats</span>
+                {stats?.open_threats_by_severity && stats.open_threats_by_severity.total > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-xs font-bold bg-rose-600 text-white leading-none">
+                    {stats.open_threats_by_severity.total}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
 
-            <button
-              onClick={() => setActiveTab('rules')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'rules'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5 text-blue-600" />
-              <span>Rules</span>
-            </button>
+          {/* Section: Configure */}
+          <div>
+            <div className="nav-section-label">Configure</div>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => setActiveTab('rules')}
+                className={activeTab === 'rules' ? 'nav-item-active' : 'nav-item'}
+              >
+                <Shield className="w-3.5 h-3.5 text-blue-600" />
+                <span>Rules</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('applications')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'applications'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Applications ({apps.length})</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('applications')}
+                className={activeTab === 'applications' ? 'nav-item-active' : 'nav-item'}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Applications ({apps.length})</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('guide')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'guide'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Code2 className="w-3.5 h-3.5" />
-              <span>Connect Guide</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('guide')}
+                className={activeTab === 'guide' ? 'nav-item-active' : 'nav-item'}
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Connect Guide</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('ml')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'ml'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5 text-blue-600" />
-              <span>ML Data</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('ml')}
+                className={activeTab === 'ml' ? 'nav-item-active' : 'nav-item'}
+              >
+                <Database className="w-3.5 h-3.5 text-blue-600" />
+                <span>ML Data</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-white text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Sliders className="w-3.5 h-3.5 text-slate-600" />
-              <span>Settings</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={activeTab === 'settings' ? 'nav-item-active' : 'nav-item'}
+              >
+                <Sliders className="w-3.5 h-3.5 text-slate-600" />
+                <span className="flex-1 text-left">Settings</span>
+                {currentRole === 'admin' && pendingUsersCount > 0 && (
+                  <span
+                    className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white leading-none"
+                    title={`${pendingUsersCount} pending user approval(s)`}
+                  >
+                    {pendingUsersCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
         </nav>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Global controls */}
-        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between lg:justify-end gap-2.5 sticky top-0 z-40">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between lg:justify-end gap-3 sticky top-0 z-40">
           <select
             aria-label="Navigate dashboard"
             value={activeTab}
@@ -741,33 +744,48 @@ export default function App() {
             <option value="applications">Applications ({apps.length})</option>
             <option value="guide">Connect Guide</option>
             <option value="ml">ML Data</option>
-            <option value="settings">Settings</option>
+            <option value="settings">Settings {pendingUsersCount > 0 ? `(${pendingUsersCount})` : ''}</option>
           </select>
-          {/* Mode Indicator & Settings trigger */}
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-200"
-            title="Current detection mode"
-          >
-            <Shield className="w-3.5 h-3.5 text-blue-600" />
-            <span>Mode: {platformSettings.mode === 'shadow' ? 'Monitoring only' : 'Alert-Only'}</span>
+
+          {/* Mode Indicator & status dot */}
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <span className="status-dot status-dot-ok" />
+            <span className="hidden sm:inline">
+              Mode: <span className="font-semibold text-slate-800">{platformSettings.mode === 'shadow' ? 'Monitoring only' : 'Alert-Only'}</span>
+            </span>
           </div>
 
-          {/* Auto Refresh Toggle (5s) */}
+          {/* Auto Refresh Toggle */}
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-            title="Auto-refresh every 5 seconds"
+            className="btn btn-ghost text-xs px-2.5 py-1 flex items-center gap-1.5 text-slate-600"
+            title="Auto-refresh interval"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${autoRefresh ? 'animate-spin-slow' : 'opacity-40'}`} />
-            <span className="font-mono tabular-nums">{autoRefresh ? `5s` : 'Paused'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${autoRefresh ? 'animate-spin-slow' : 'opacity-40'}`} />
+            <span className="font-mono tabular-nums">{autoRefresh ? '5s' : 'Paused'}</span>
           </button>
 
-          {/* User Profile & Logout */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <span className="text-xs font-medium text-slate-700 hidden sm:inline">{currentUser}</span>
+          {/* User Profile & Role & Logout */}
+          <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-semibold text-slate-900 leading-tight">
+                {currentFullName || currentUser}
+              </span>
+              <div className="flex items-center gap-1 justify-end">
+                {currentRole === 'member' ? (
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                    Read-only
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                    Admin
+                  </span>
+                )}
+              </div>
+            </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -804,6 +822,7 @@ export default function App() {
         {activeTab === 'applications' && (
           <ApplicationsView
             apps={apps}
+            currentRole={currentRole}
             setIsRegisteringApp={setIsRegisteringApp}
             handleRegisterApp={handleRegisterApp}
             handleRegenerateKey={handleRegenerateKey}
@@ -848,6 +867,7 @@ export default function App() {
           <ThreatsView
             apps={apps}
             selectedAppId={selectedAppId}
+            currentRole={currentRole}
             onSelectApp={setSelectedAppId}
             initialThreatId={initialThreatId}
             onThreatsUpdated={() => {
@@ -859,7 +879,7 @@ export default function App() {
         {/* ========================================================================= */}
         {/* TAB 3: THREAT DETECTION RULES (STEP 3) */}
         {/* ========================================================================= */}
-        {activeTab === 'rules' && <RulesView />}
+        {activeTab === 'rules' && <RulesView currentRole={currentRole} />}
 
         {/* ========================================================================= */}
         {/* TAB 6: ML TRAINING DATA & EXPORT PAGE (STEP 5) */}
@@ -878,7 +898,9 @@ export default function App() {
         {activeTab === 'settings' && (
           <SettingsView
             authToken={authToken}
+            currentRole={currentRole}
             selectedAppId={selectedAppId}
+            onPendingUsersCountChange={setPendingUsersCount}
             onSimulateAttack={handleSimulateAttack}
             onTestingDataGenerated={() => {
               fetchStats();
@@ -958,19 +980,19 @@ export default function App() {
       />
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white px-6 py-3 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+      <footer className="border-t border-slate-200 bg-white px-6 py-2.5 text-xs text-slate-500 font-mono flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Central API Security Ingest Platform Active</span>
+          <span className="status-dot status-dot-ok" />
+          <span>Active</span>
           <span aria-hidden="true">·</span>
-          <span>Monitoring only (not blocking traffic)</span>
+          <span>Monitoring only</span>
           <span aria-hidden="true">·</span>
-          <span>{apps.length} Applications Registered</span>
+          <span>{apps.length} apps</span>
+          <span aria-hidden="true">·</span>
+          <span>{autoRefresh ? '5s refresh' : 'paused'}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span>Auto-refresh: 5s</span>
-          <span aria-hidden="true">·</span>
-          <span>Rule-Based Detection (13 Rules)</span>
+        <div className="hidden sm:flex items-center gap-2 text-slate-400">
+          <span>13 detection rules</span>
         </div>
       </footer>
       </div>
