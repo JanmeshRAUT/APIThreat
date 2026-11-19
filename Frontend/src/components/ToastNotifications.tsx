@@ -19,16 +19,16 @@ export function ToastNotifications({ toasts, onDismiss, onViewThreat }: ToastNot
         return (
           <div
             key={threat.id}
-            className={`pointer-events-auto rounded-lg p-4 shadow-xl border backdrop-blur-xs transition-all animate-in slide-in-from-top-2 duration-200 ${
+            className={`pointer-events-auto rounded p-3 shadow-sm border transition-all ${
               isCritical
-                ? 'bg-rose-900/95 text-white border-rose-700 shadow-rose-900/20'
-                : 'bg-slate-900/95 text-white border-amber-600/80 shadow-slate-900/30'
+                ? 'bg-rose-900 text-white border-rose-700'
+                : 'bg-slate-900 text-white border-amber-600/80'
             }`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2.5">
                 <div
-                  className={`p-1.5 rounded-lg shrink-0 ${
+                  className={`p-1 rounded shrink-0 ${
                     isCritical ? 'bg-rose-800 text-rose-200' : 'bg-amber-500/20 text-amber-400'
                   }`}
                 >
@@ -37,33 +37,33 @@ export function ToastNotifications({ toasts, onDismiss, onViewThreat }: ToastNot
                 <div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                      className={`text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.2 rounded ${
                         isCritical ? 'bg-rose-800 text-rose-200' : 'bg-amber-400/20 text-amber-300'
                       }`}
                     >
                       {threat.severity}
                     </span>
-                    <span className="text-xs font-bold leading-tight">{threat.rule_name}</span>
+                    <span className="text-xs font-semibold leading-tight">{threat.rule_name}</span>
                   </div>
-                  <div className="text-xs text-slate-300 mt-1 font-mono">
+                  <div className="text-[11px] text-slate-300 mt-1 font-mono">
                     IP: <span className="text-white font-semibold">{threat.client_ip}</span> · App:{' '}
                     <span className="text-white">{threat.app_name}</span>
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{threat.evidence}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{threat.evidence}</div>
                 </div>
               </div>
 
               <button
                 onClick={() => onDismiss(threat.id)}
-                className="text-slate-400 hover:text-white p-1 rounded transition-colors"
+                className="text-slate-400 hover:text-white p-1 rounded transition-colors cursor-pointer"
                 title="Dismiss"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-mono text-xs">
+            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-mono text-[11px]">
                 {threat.hit_count > 1 ? `×${threat.hit_count} hits` : 'Just detected'}
               </span>
               <button
@@ -71,9 +71,9 @@ export function ToastNotifications({ toasts, onDismiss, onViewThreat }: ToastNot
                   onViewThreat(threat);
                   onDismiss(threat.id);
                 }}
-                className="font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                className="font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors cursor-pointer text-xs"
               >
-                <span>Investigate in Threats</span>
+                <span>Investigate</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>

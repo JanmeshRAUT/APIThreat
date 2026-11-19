@@ -249,7 +249,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
   return (
     <div className="flex flex-col gap-6">
       {statusToast && (
-        <div className="fixed bottom-5 right-5 z-40 flex items-center gap-3 rounded-lg bg-slate-900 px-4 py-3 text-xs text-white shadow-xl" role="status">
+        <div className="fixed bottom-5 right-5 z-40 flex items-center gap-3 rounded bg-slate-900 px-3.5 py-2.5 text-xs text-white shadow-sm border border-slate-700" role="status">
           <span>{statusToast.message}</span>
           <button
             onClick={() => {
@@ -266,44 +266,60 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
         </div>
       )}
       {/* Top Banner / Stats Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 rounded-lg p-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Security Threat Registry</h2>
+            <h1 className="page-title text-slate-900">Threats</h1>
             <span className="text-xs font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
               MONITORING ONLY
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Rules evaluate incoming telemetry in memory. Detections are logged and deduplicated per attacker without blocking real user traffic.
+          <p className="page-sub mt-0.5">
+            Real-time threat registry and detection telemetry.
           </p>
         </div>
 
         {/* Severity Metrics Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setSeverityFilter('critical')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-700" aria-hidden="true" />
-            <span className="font-semibold text-rose-900">{counts.critical}</span>
-            <span className="text-rose-700 font-medium">Critical</span>
+          <button
+            onClick={() => setSeverityFilter('critical')}
+            className={`flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer ${
+              severityFilter === 'critical' ? 'border-b-2 border-rose-600 font-semibold text-rose-700' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="status-dot status-dot-danger" />
+            <span>Critical {counts.critical}</span>
           </button>
-          <button onClick={() => setSeverityFilter('high')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-200 text-xs hover:bg-orange-100 cursor-pointer">
-            <ShieldAlert className="w-3.5 h-3.5 text-orange-700" aria-hidden="true" />
-            <span className="font-semibold text-orange-900">{counts.high}</span>
-            <span className="text-orange-700 font-medium">High</span>
+          <button
+            onClick={() => setSeverityFilter('high')}
+            className={`flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer ${
+              severityFilter === 'high' ? 'border-b-2 border-amber-600 font-semibold text-amber-700' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="status-dot status-dot-warn" />
+            <span>High {counts.high}</span>
           </button>
-          <button onClick={() => setSeverityFilter('medium')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs hover:bg-amber-100 cursor-pointer">
-            <Clock className="w-3.5 h-3.5 text-amber-700" aria-hidden="true" />
-            <span className="font-semibold text-amber-900">{counts.medium}</span>
-            <span className="text-amber-700 font-medium">Medium</span>
+          <button
+            onClick={() => setSeverityFilter('medium')}
+            className={`flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer ${
+              severityFilter === 'medium' ? 'border-b-2 border-blue-600 font-semibold text-blue-700' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="status-dot status-dot-accent" />
+            <span>Medium {counts.medium}</span>
           </button>
-          <button onClick={() => setSeverityFilter('low')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-xs hover:bg-blue-100 cursor-pointer">
-            <CheckCircle2 className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
-            <span className="font-semibold text-blue-900">{counts.low}</span>
-            <span className="text-blue-700 font-medium">Low</span>
+          <button
+            onClick={() => setSeverityFilter('low')}
+            className={`flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer ${
+              severityFilter === 'low' ? 'border-b-2 border-slate-400 font-semibold text-slate-700' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="status-dot status-dot-muted" />
+            <span>Low {counts.low}</span>
           </button>
           <button
             onClick={fetchThreats}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+            className="p-1.5 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
             title="Refresh threats"
             aria-label="Refresh threats"
           >
@@ -312,28 +328,8 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
         </div>
       </div>
 
-      <div className="bg-slate-900 text-white rounded-lg p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Needs attention</div>
-          <div className="mt-1 text-sm font-semibold">
-            {openHighCritical} open critical/high threats
-            {newestThreat && <span className="text-slate-300 font-normal"> · Newest: {newestThreat.rule_name}</span>}
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setStatusFilter('open');
-            setSeverityFilter('ALL');
-          }}
-          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold bg-white text-slate-900 hover:bg-slate-100 rounded-md cursor-pointer"
-        >
-          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-          Review open threats
-        </button>
-      </div>
-
       {/* Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           {/* Search */}
           <div className="relative min-w-[200px] flex-1 md:flex-initial">
@@ -343,7 +339,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
               placeholder="Search IP, rule, ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800 placeholder-slate-400"
+              className="input pl-8 pr-3 py-1 text-xs w-full"
             />
           </div>
 
@@ -351,7 +347,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
           <select
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+            className="input py-1 text-xs w-auto cursor-pointer font-medium"
           >
             <option value="ALL">All Severities</option>
             <option value="critical">Critical</option>
@@ -364,7 +360,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+            className="input py-1 text-xs w-auto cursor-pointer font-medium"
           >
             <option value="ALL">All Statuses</option>
             <option value="open">Open</option>
@@ -377,7 +373,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
           <select
             value={ruleFilter}
             onChange={(e) => setRuleFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium max-w-[180px] truncate"
+            className="input py-1 text-xs w-auto cursor-pointer font-medium max-w-[180px] truncate"
           >
             <option value="ALL">All {rules.length || 'available'} Rules</option>
             {rules.map((r) => (
@@ -393,18 +389,38 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
         </div>
       </div>
 
+      <div className="panel border-l-2 border-l-[var(--color-danger)] p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Needs attention</div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">
+            {openHighCritical} open critical/high threats
+            {newestThreat && <span className="text-slate-500 font-normal"> · Newest: {newestThreat.rule_name}</span>}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setStatusFilter('open');
+            setSeverityFilter('ALL');
+          }}
+          className="btn btn-secondary text-xs"
+        >
+          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+          Review open threats
+        </button>
+      </div>
+
       {/* Threats Table */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+      <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-sans uppercase text-xs tracking-wider">
+            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
               <tr>
-                <th className="py-3 px-3.5">Severity</th>
-                <th className="py-3 px-3.5">Threat</th>
-                <th className="py-3 px-3.5">Who</th>
-                <th className="py-3 px-3.5">Activity</th>
-                <th className="py-3 px-3.5">Status</th>
-                <th className="py-3 px-3.5 text-right"><span className="sr-only">Open details</span></th>
+                <th className="th">Severity</th>
+                <th className="th">Threat</th>
+                <th className="th">Who</th>
+                <th className="th">Activity</th>
+                <th className="th">Status</th>
+                <th className="th text-right"><span className="sr-only">Open details</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -412,19 +428,16 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
                 Array.from({ length: 4 }).map((_, index) => (
                   <tr key={`skeleton-${index}`} aria-hidden="true">
                     {Array.from({ length: 6 }).map((__, cellIndex) => (
-                      <td key={cellIndex} className="py-4 px-3.5">
-                        <div className="h-3 rounded bg-slate-200 animate-pulse" />
+                      <td key={cellIndex} className="td py-2">
+                        <div className="h-3 rounded bg-slate-200" />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : filteredThreats.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-14 text-center text-slate-500 font-sans">
+                  <td colSpan={6} className="td py-8 text-center text-slate-500 font-sans">
                     <div className="max-w-sm mx-auto flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                        <ShieldCheck className="w-6 h-6" aria-hidden="true" />
-                      </div>
                       <div className="font-semibold text-slate-800 text-sm">
                         {hasActiveFilters ? 'No results for these filters' : 'No threats yet — you’re all clear'}
                       </div>
@@ -432,7 +445,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
                         {hasActiveFilters ? 'Try clearing a filter to see more threat records.' : 'Incoming detections will appear here when the monitor finds one.'}
                       </p>
                       {hasActiveFilters && (
-                        <button onClick={clearFilters} className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md cursor-pointer">
+                        <button onClick={clearFilters} className="btn btn-secondary text-xs">
                           Clear filters
                         </button>
                       )}
@@ -440,70 +453,88 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
                   </td>
                 </tr>
               ) : (
-                filteredThreats.map((t) => (
-                  <tr
-                    key={t.id}
-                    ref={(row) => {
-                      if (inspectThreat?.id === t.id) inspectTriggerRef.current = row;
-                    }}
-                    onClick={() => {
-                      inspectTriggerRef.current = document.activeElement as HTMLTableRowElement;
-                      setInspectThreat(t);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        inspectTriggerRef.current = event.currentTarget;
+                filteredThreats.map((t) => {
+                  const rowClass =
+                    t.severity === 'critical'
+                      ? 'row-crit'
+                      : t.severity === 'high'
+                      ? 'row-high'
+                      : t.severity === 'medium'
+                      ? 'row-med'
+                      : '';
+                  const tagClass =
+                    t.severity === 'critical'
+                      ? 'tag tag-critical'
+                      : t.severity === 'high'
+                      ? 'tag tag-high'
+                      : t.severity === 'medium'
+                      ? 'tag tag-medium'
+                      : 'tag tag-low';
+
+                  return (
+                    <tr
+                      key={t.id}
+                      ref={(row) => {
+                        if (inspectThreat?.id === t.id) inspectTriggerRef.current = row;
+                      }}
+                      onClick={() => {
+                        inspectTriggerRef.current = document.activeElement as HTMLTableRowElement;
                         setInspectThreat(t);
-                      }
-                    }}
-                    tabIndex={0}
-                    className="hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs uppercase tracking-wider ${getSeverityBadge(t.severity)}`}>
-                        {t.severity === 'critical' || t.severity === 'high' ? <AlertTriangle className="w-3 h-3" aria-hidden="true" /> : <ShieldCheck className="w-3 h-3" aria-hidden="true" />}
-                        {t.severity}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3.5 min-w-[220px] font-sans">
-                      <div className="font-semibold text-slate-900 text-xs">{t.rule_name}</div>
-                      <div className="text-xs text-slate-600 truncate max-w-[320px]" title={t.evidence}>{t.evidence}</div>
-                    </td>
-                    <td className="py-3 px-3.5 min-w-[150px] font-sans">
-                      <div className="font-medium text-slate-800">{t.app_name}</div>
-                      <div className="flex items-center gap-1 text-xs text-slate-600">
-                        <span className="font-mono">{t.client_ip}</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(t.client_ip);
-                          }}
-                          className="text-slate-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-0.5"
-                          title="Copy IP"
-                          aria-label={`Copy IP ${t.client_ip}`}
-                        >
-                          {copiedIp === t.client_ip ? <Check className="w-3 h-3 text-emerald-700" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3.5 whitespace-nowrap">
-                      <div className="font-semibold text-slate-800">×{t.hit_count} hits</div>
-                      <time className="text-xs text-slate-600" dateTime={t.last_seen} title={new Date(t.last_seen).toLocaleString()}>
-                        Last seen {formatRelativeTime(t.last_seen)}
-                      </time>
-                    </td>
-                    <td className="py-3 px-3.5 whitespace-nowrap font-sans">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-semibold capitalize ${getStatusBadge(t.status)}`}>
-                        {t.status === 'resolved' ? <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> : t.status === 'open' ? <AlertTriangle className="w-3 h-3" aria-hidden="true" /> : <Clock className="w-3 h-3" aria-hidden="true" />}
-                        {t.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3.5 text-right">
-                      <span className="inline-flex p-1.5 text-slate-500" aria-hidden="true">›</span>
-                    </td>
-                  </tr>
-                ))
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          inspectTriggerRef.current = event.currentTarget;
+                          setInspectThreat(t);
+                        }
+                      }}
+                      tabIndex={0}
+                      className={`hover:bg-blue-50/40 cursor-pointer transition-colors ${rowClass}`}
+                    >
+                      <td className="td whitespace-nowrap">
+                        <span className={tagClass}>
+                          {t.severity}
+                        </span>
+                      </td>
+                      <td className="td min-w-[220px] font-sans">
+                        <div className="font-semibold text-slate-900 text-xs">{t.rule_name}</div>
+                        <div className="text-xs text-slate-600 truncate max-w-[320px]" title={t.evidence}>{t.evidence}</div>
+                      </td>
+                      <td className="td min-w-[150px] font-sans">
+                        <div className="font-medium text-slate-800">{t.app_name}</div>
+                        <div className="flex items-center gap-1 text-xs text-slate-600">
+                          <span className="font-mono">{t.client_ip}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(t.client_ip);
+                            }}
+                            className="text-slate-600 hover:text-blue-700 rounded p-0.5 cursor-pointer"
+                            title="Copy IP"
+                            aria-label={`Copy IP ${t.client_ip}`}
+                          >
+                            {copiedIp === t.client_ip ? <Check className="w-3 h-3 text-emerald-700" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="td whitespace-nowrap font-mono">
+                        <div className="font-semibold text-slate-800">×{t.hit_count} hits</div>
+                        <time className="text-[11px] text-slate-500 block" dateTime={t.last_seen} title={new Date(t.last_seen).toLocaleString()}>
+                          Last seen {formatRelativeTime(t.last_seen)}
+                        </time>
+                      </td>
+                      <td className="td whitespace-nowrap font-sans">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-semibold capitalize ${getStatusBadge(t.status)}`}>
+                          {t.status === 'resolved' ? <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> : t.status === 'open' ? <AlertTriangle className="w-3 h-3" aria-hidden="true" /> : <Clock className="w-3 h-3" aria-hidden="true" />}
+                          {t.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="td text-right">
+                        <span className="inline-flex p-1 text-slate-500" aria-hidden="true">›</span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -511,184 +542,200 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
       </div>
 
       {/* Alert History Table (Step 4) */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-              <Bell className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Alert History</h3>
-              <p className="text-xs text-slate-500">
-                Webhook alert delivery log (3s timeout, up to 2 retries, deduplicated per 30m + 100-hit milestones)
-              </p>
-            </div>
+      <div className="panel overflow-hidden">
+        <div className="panel-head flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900 tracking-tight">Alert History</h3>
+            <p className="text-[11px] text-slate-500">
+              Webhook alert delivery log (3s timeout, up to 2 retries, deduplicated per 30m + 100-hit milestones)
+            </p>
           </div>
           <span className="text-xs text-slate-500 font-mono">{alertHistory.length} deliveries</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-sans uppercase text-xs tracking-wider">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Time</th>
-                <th className="py-3 px-4">Threat</th>
-                <th className="py-3 px-4">Application &amp; IP</th>
-                <th className="py-3 px-4">Trigger</th>
-                <th className="py-3 px-4">Status (Sent / Failed)</th>
+                <th className="th">Time</th>
+                <th className="th">Threat</th>
+                <th className="th">Application &amp; IP</th>
+                <th className="th">Trigger</th>
+                <th className="th">Status (Sent / Failed)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {alertHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-400 font-sans">
-                    No webhook alerts dispatched yet. Configure a Webhook URL in Settings and click &quot;Send test alert&quot; or trigger a High/Critical threat.
+                  <td colSpan={5} className="td py-8 text-center text-slate-400 font-sans">
+                    No webhook alerts dispatched yet.
                   </td>
                 </tr>
               ) : (
-                alertHistory.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2.5 px-4 whitespace-nowrap text-slate-600 tabular-nums">
-                      {new Date(entry.timestamp).toLocaleString()}
-                    </td>
-                    <td className="py-2.5 px-4 font-sans">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-1.5 py-0.5 rounded border text-xs uppercase font-bold ${getSeverityBadge(entry.severity)}`}>
-                          {entry.severity}
-                        </span>
-                        <span className="font-semibold text-slate-900">{entry.rule_name}</span>
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">
-                      <span className="font-sans font-medium text-slate-800">{entry.app_name}</span>
-                      <span className="text-slate-300 mx-1.5">·</span>
-                      <span>{entry.client_ip}</span>
-                    </td>
-                    <td className="py-2.5 px-4 font-sans whitespace-nowrap">
-                      <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                        {entry.trigger_reason === 'milestone_100_hits'
-                          ? '100-Hit Milestone'
-                          : entry.trigger_reason === 'test_alert'
-                          ? 'Test Alert'
-                          : 'New Threat'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 whitespace-nowrap font-sans">
-                      {entry.status === 'sent' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>sent ({entry.attempts} {entry.attempts === 1 ? 'try' : 'tries'})</span>
-                        </span>
-                      ) : (
+                alertHistory.map((entry) => {
+                  const rowClass =
+                    entry.severity === 'critical'
+                      ? 'row-crit'
+                      : entry.severity === 'high'
+                      ? 'row-high'
+                      : entry.severity === 'medium'
+                      ? 'row-med'
+                      : '';
+                  const tagClass =
+                    entry.severity === 'critical'
+                      ? 'tag tag-critical'
+                      : entry.severity === 'high'
+                      ? 'tag tag-high'
+                      : entry.severity === 'medium'
+                      ? 'tag tag-medium'
+                      : 'tag tag-low';
+
+                  return (
+                    <tr key={entry.id} className={`hover:bg-slate-50 transition-colors ${rowClass}`}>
+                      <td className="td whitespace-nowrap text-slate-600 tabular-nums">
+                        {new Date(entry.timestamp).toLocaleString()}
+                      </td>
+                      <td className="td font-sans">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                            <XCircle className="w-3 h-3" />
-                            <span>failed ({entry.attempts} {entry.attempts === 1 ? 'try' : 'tries'})</span>
+                          <span className={tagClass}>
+                            {entry.severity}
                           </span>
-                          {entry.error && (
-                            <span className="text-xs text-rose-600 font-mono truncate max-w-[180px]" title={entry.error}>
-                              {entry.error}
-                            </span>
-                          )}
+                          <span className="font-semibold text-slate-900">{entry.rule_name}</span>
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="td text-slate-600 whitespace-nowrap">
+                        <span className="font-sans font-medium text-slate-800">{entry.app_name}</span>
+                        <span className="text-slate-300 mx-1.5">·</span>
+                        <span>{entry.client_ip}</span>
+                      </td>
+                      <td className="td font-sans whitespace-nowrap">
+                        <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                          {entry.trigger_reason === 'milestone_100_hits'
+                            ? '100-Hit Milestone'
+                            : entry.trigger_reason === 'test_alert'
+                            ? 'Test Alert'
+                            : 'New Threat'}
+                        </span>
+                      </td>
+                      <td className="td whitespace-nowrap font-sans">
+                        {entry.status === 'sent' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>sent ({entry.attempts} {entry.attempts === 1 ? 'try' : 'tries'})</span>
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                              <XCircle className="w-3 h-3" />
+                              <span>failed ({entry.attempts} {entry.attempts === 1 ? 'try' : 'tries'})</span>
+                            </span>
+                            {entry.error && (
+                              <span className="text-xs text-rose-600 font-mono truncate max-w-[180px]" title={entry.error}>
+                                {entry.error}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Threat Inspection / Status Update Modal */}
+      {/* Threat Inspection / Status Update Drawer */}
       {inspectThreat && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div ref={inspectDialogRef} role="dialog" aria-modal="true" aria-labelledby="threat-dialog-title" tabIndex={-1} className="bg-white rounded-md max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg border ${getSeverityBadge(inspectThreat.severity)}`}>
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
+        <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
+          <div ref={inspectDialogRef} role="dialog" aria-modal="true" aria-labelledby="threat-dialog-title" tabIndex={-1} className="bg-white h-full w-[480px] border-l border-slate-200 shadow-md flex flex-col">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className={inspectThreat.severity === 'critical' ? 'tag tag-critical' : inspectThreat.severity === 'high' ? 'tag tag-high' : inspectThreat.severity === 'medium' ? 'tag tag-medium' : 'tag tag-low'}>
+                  {inspectThreat.severity}
+                </span>
                 <div>
-                  <h3 id="threat-dialog-title" className="font-bold text-slate-900 text-sm tracking-tight">{inspectThreat.rule_name}</h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                    <span className="font-mono text-slate-600">{inspectThreat.id}</span>
+                  <h3 id="threat-dialog-title" className="font-semibold text-slate-900 text-sm tracking-tight">{inspectThreat.rule_name}</h3>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
+                    <span>{inspectThreat.id}</span>
                     <span>·</span>
-                    <span>App: <strong className="text-slate-700">{inspectThreat.app_name}</strong></span>
+                    <span>{inspectThreat.app_name}</span>
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setInspectThreat(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Close threat details"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 flex flex-col gap-4 text-xs font-sans">
-              {inspectReasoning && (
-                <section className="space-y-3" aria-labelledby="threat-reasoning-title">
-                  <h4 id="threat-reasoning-title" className="text-sm font-bold text-slate-900">{inspectReasoning.headline}</h4>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div><div className="font-bold text-slate-700">What happened</div><p className="mt-1 text-slate-600">{inspectReasoning.whatHappened}</p></div>
-                    <div><div className="font-bold text-slate-700">Why flagged</div><p className="mt-1 text-slate-600">{inspectReasoning.whyFlagged}</p></div>
-                    <div><div className="font-bold text-slate-700">Risk</div><p className="mt-1 text-slate-600">{inspectReasoning.risk}</p></div>
-                    <div><div className="font-bold text-slate-700">Could be a false alarm</div><p className="mt-1 text-slate-600">{inspectReasoning.falseAlarm}</p></div>
+            {/* Drawer Body */}
+            <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 text-xs font-sans">
+              {/* Summary Section */}
+              <section className="space-y-2">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Summary</div>
+                {inspectReasoning && (
+                  <div className="text-xs text-slate-700 space-y-1">
+                    <p className="font-medium text-slate-900">{inspectReasoning.headline}</p>
+                    <p className="text-slate-600">{inspectReasoning.whatHappened}</p>
                   </div>
-                  <div>
-                    <div className="font-bold text-slate-700">Recommended actions <span className="font-normal text-slate-500">({inspectReasoning.confidence} confidence)</span></div>
-                    <ul className="mt-1 list-disc pl-5 text-slate-600 space-y-0.5">
-                      {inspectReasoning.actions.map((action) => <li key={action}>{action}</li>)}
-                    </ul>
+                )}
+                <div className="grid grid-cols-2 gap-2 font-mono mt-2">
+                  <div className="p-2 rounded bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-sans block">Client IP</span>
+                    <span className="text-slate-900 font-bold">{inspectThreat.client_ip}</span>
                   </div>
-                </section>
-              )}
-              {/* Evidence Box */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  What we saw (No credentials or secret values)
+                  <div className="p-2 rounded bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-sans block">Hits</span>
+                    <span className="text-blue-700 font-bold">×{inspectThreat.hit_count}</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-sans block">First Seen</span>
+                    <span className="text-slate-700">{new Date(inspectThreat.first_seen).toLocaleString()}</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-sans block">Last Seen</span>
+                    <span className="text-slate-700">{new Date(inspectThreat.last_seen).toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="font-mono text-slate-800 bg-white p-2.5 rounded border border-slate-200 text-xs break-all">
+              </section>
+
+              {/* Evidence Section */}
+              <section className="space-y-1.5">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Evidence</div>
+                <div className="font-mono text-slate-800 bg-slate-50 p-2.5 rounded border border-slate-200 text-xs break-all leading-relaxed">
                   {inspectThreat.evidence}
                 </div>
-              </div>
+              </section>
 
-              {/* Threat Details Grid */}
-              <div className="grid grid-cols-2 gap-3 font-mono">
-                <div className="bg-slate-50 p-2.5 rounded border border-slate-100">
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-sans block">Client IP</span>
-                  <span className="text-slate-900 font-bold text-xs">{inspectThreat.client_ip}</span>
-                </div>
-                <div className="bg-slate-50 p-2.5 rounded border border-slate-100">
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-sans block">Hit Count (De-duplicated)</span>
-                  <span className="text-blue-700 font-bold text-xs">×{inspectThreat.hit_count} occurrences</span>
-                </div>
-                <div className="bg-slate-50 p-2.5 rounded border border-slate-100">
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-sans block">First Seen</span>
-                  <span className="text-slate-700 text-xs">{new Date(inspectThreat.first_seen).toLocaleString()}</span>
-                </div>
-                <div className="bg-slate-50 p-2.5 rounded border border-slate-100">
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-sans block">Last Seen</span>
-                  <span className="text-slate-700 text-xs">{new Date(inspectThreat.last_seen).toLocaleString()}</span>
-                </div>
-              </div>
+              {/* Recommended Action Section */}
+              <section className="space-y-1.5">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Recommended action</div>
+                {inspectReasoning ? (
+                  <ul className="list-disc pl-4 text-slate-600 space-y-1">
+                    {inspectReasoning.actions.map((action) => <li key={action}>{action}</li>)}
+                  </ul>
+                ) : (
+                  <p className="text-slate-600">Review threat details and update status accordingly.</p>
+                )}
+              </section>
 
               {/* Status Management Actions */}
               {isAdmin ? (
-                <div className="pt-2 border-t border-slate-200">
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
-                    Update Status:
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="pt-3 border-t border-slate-200">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                    Update Status
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       disabled={isUpdatingStatus || inspectThreat.status === 'open'}
                       onClick={() => handleUpdateStatus(inspectThreat.id, 'open')}
-                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded text-xs font-semibold border transition-all cursor-pointer ${
                         inspectThreat.status === 'open'
                           ? 'bg-rose-600 text-white border-rose-600'
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700'
@@ -700,7 +747,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
                     <button
                       disabled={isUpdatingStatus || inspectThreat.status === 'acknowledged'}
                       onClick={() => handleUpdateStatus(inspectThreat.id, 'acknowledged')}
-                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded text-xs font-semibold border transition-all cursor-pointer ${
                         inspectThreat.status === 'acknowledged'
                           ? 'bg-amber-600 text-white border-amber-600'
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-50 hover:text-amber-700'
@@ -712,7 +759,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
                     <button
                       disabled={isUpdatingStatus || inspectThreat.status === 'resolved'}
                       onClick={() => handleUpdateStatus(inspectThreat.id, 'resolved')}
-                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded text-xs font-semibold border transition-all cursor-pointer ${
                         inspectThreat.status === 'resolved'
                           ? 'bg-emerald-600 text-white border-emerald-600'
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-emerald-50 hover:text-emerald-700'
@@ -724,7 +771,7 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
                     <button
                       disabled={isUpdatingStatus || inspectThreat.status === 'false_positive'}
                       onClick={() => handleUpdateStatus(inspectThreat.id, 'false_positive')}
-                      className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded text-xs font-semibold border transition-all cursor-pointer ${
                         inspectThreat.status === 'false_positive'
                           ? 'bg-slate-700 text-white border-slate-700'
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900'
@@ -741,11 +788,11 @@ export function ThreatsView({ apps, selectedAppId, currentRole = 'admin', onThre
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+            {/* Drawer Footer */}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
               <button
                 onClick={() => setInspectThreat(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                className="btn btn-secondary text-xs"
               >
                 Close
               </button>

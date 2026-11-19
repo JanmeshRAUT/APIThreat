@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface LoginPageProps {
   loginUsername: string;
@@ -31,25 +30,13 @@ export function LoginPage({
 }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
 
-  const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
   return (
-    <motion.div
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex flex-col gap-6"
-    >
+    <div className="flex flex-col gap-6">
       <div>
-        <h2
-          className="font-bold text-slate-900 mb-1"
-          style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, letterSpacing: '-0.02em' }}
-        >
-          Sign in
+        <h2 className="page-title text-slate-900 mb-1">
+          Sign In
         </h2>
-        <p className="text-slate-500" style={{ fontSize: 13.5 }}>Access the security dashboard.</p>
+        <p className="page-sub">Access the security dashboard.</p>
       </div>
 
       {/* Success notice from registration */}
@@ -211,6 +198,6 @@ export function LoginPage({
           Forgot your password? Ask an administrator to reset it.
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }

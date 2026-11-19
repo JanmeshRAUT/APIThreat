@@ -118,18 +118,19 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Top Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Threat Detection Rules ({rules.length} Rules)</h2>
+            <h1 className="page-title text-slate-900">Rules</h1>
+            <span className="text-xs text-slate-500 font-mono">{rules.length} rules</span>
             <span className="text-xs font-mono font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
               rules.json
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Rules are stored in <code className="font-mono text-slate-700 font-semibold">rules.json</code> and editable at runtime without code deployment. All rules run in shadow mode.
+          <p className="page-sub mt-0.5">
+            Rules are stored in <code className="font-mono text-slate-700 font-semibold">rules.json</code> and editable at runtime.
           </p>
         </div>
 
@@ -141,7 +142,7 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
       </div>
 
       {errorMsg && (
-        <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center justify-between">
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center justify-between">
           <span>{errorMsg}</span>
           <button onClick={() => setErrorMsg(null)} className="text-rose-500 hover:text-rose-800">×</button>
         </div>
@@ -157,8 +158,8 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
           return (
             <div
               key={rule.id}
-              className={`bg-white border rounded-lg p-5 transition-all flex flex-col justify-between ${
-                isEnabled ? 'border-slate-200' : 'border-slate-200 bg-slate-50/60 opacity-75'
+              className={`panel p-4 flex flex-col justify-between ${
+                isEnabled ? '' : 'bg-slate-50/60 opacity-75'
               }`}
             >
               <div>
@@ -166,19 +167,19 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{rule.name}</span>
-                      <span className={`px-2 py-0.5 rounded border text-xs uppercase font-bold tracking-wider ${getSeverityBadge(rule.severity)}`}>
+                      <span className="font-semibold text-slate-900 text-xs">{rule.name}</span>
+                      <span className={`px-1.5 py-0.5 rounded border text-[10px] uppercase font-bold tracking-wider ${getSeverityBadge(rule.severity)}`}>
                         {rule.severity}
                       </span>
                     </div>
-                    <div className="text-xs font-mono text-slate-400 mt-0.5">{rule.id}</div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">{rule.id}</div>
                   </div>
 
                   {/* Toggle Switch */}
                   <button
                     disabled={!isAdmin}
                     onClick={() => handleToggleRule(rule)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border ${
                       !isAdmin
                         ? 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-500 border-slate-200'
                         : isEnabled
@@ -192,19 +193,19 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
                 </div>
 
                 {/* OWASP Tag */}
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700 mb-3">
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-[11px] font-medium text-blue-700 mb-2">
                   <Tag className="w-3 h-3" />
                   <span>{rule.owasp_tag}</span>
                 </div>
 
                 {/* Description */}
-                <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+                <p className="text-xs text-slate-600 mb-3 leading-relaxed">
                   {rule.description}
                 </p>
               </div>
 
               {/* Bottom Config: Window & Editable Threshold */}
-              <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
                   <span>Window:</span>
@@ -229,7 +230,7 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
                           [rule.id]: Math.max(1, parseInt(e.target.value) || 1),
                         }))
                       }
-                      className="w-16 px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 disabled:opacity-60"
+                      className="w-16 px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded text-slate-800 disabled:opacity-60"
                     />
                     {isAdmin && hasChanged && (
                       <button
@@ -244,7 +245,7 @@ export function RulesView({ currentRole = 'admin' }: RulesViewProps = {}) {
                 </div>
 
                 {savedFeedback[rule.id] && (
-                  <div className="w-full text-right text-xs font-medium text-emerald-600 animate-in fade-in">
+                  <div className="w-full text-right text-xs font-medium text-emerald-600">
                     ✓ {savedFeedback[rule.id]}
                   </div>
                 )}

@@ -152,21 +152,14 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
   const labelEntries = Object.entries(preview.label_counts).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* HEADER BAR */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">ML Training Data &amp; Feature Export</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Metadata-only aggregated window features (<code className="font-mono text-slate-700">features.jsonl</code>) with rule &amp; human labels.
-              </p>
-            </div>
-          </div>
+          <h1 className="page-title text-slate-900">ML Data Export</h1>
+          <p className="page-sub mt-0.5">
+            Aggregated window features (<code className="font-mono text-slate-700">features.jsonl</code>) with rule and human labels.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -174,7 +167,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
             type="button"
             onClick={handleExtractNow}
             disabled={isLoading}
-            className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            className="btn btn-secondary text-xs"
             title="Extract feature rows right now from recent in-memory requests"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${isLoading ? 'animate-spin' : ''}`} />
@@ -185,7 +178,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
             type="button"
             onClick={handleExportCsv}
             disabled={isExporting || preview.total_rows === 0}
-            className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            className="btn btn-primary text-xs"
           >
             <Download className="w-3.5 h-3.5" />
             <span>{isExporting ? 'Exporting...' : 'Export training data'}</span>
@@ -196,7 +189,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
       {/* ACTION FEEDBACK MESSAGE */}
       {statusMessage && (
         <div
-          className={`p-3.5 rounded-lg border text-xs flex items-center gap-2.5 ${
+          className={`p-3 rounded border text-xs flex items-center gap-2.5 ${
             statusMessage.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : 'bg-rose-50 border-rose-200 text-rose-800'
@@ -212,19 +205,18 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
       )}
 
       {/* FILTER OPTIONS */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5">
-        <div className="flex items-center gap-2 mb-3 text-xs font-bold text-slate-800">
-          <Filter className="w-3.5 h-3.5 text-blue-600" />
-          <span>Dataset Selection &amp; Export Options</span>
+      <div className="panel p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-xs font-semibold text-slate-800">Dataset Selection &amp; Export Options</h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
           <div>
             <label className="block font-semibold text-slate-600 mb-1">Application</label>
             <select
               value={filterAppId}
               onChange={(e) => setFilterAppId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
               <option value="ALL">All Applications</option>
               {apps.map((app) => (
@@ -240,7 +232,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
             <select
               value={windowSize}
               onChange={(e) => setWindowSize(e.target.value as 'ALL' | FeatureWindowSize)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
               <option value="ALL">All Windows (1m, 5m, 1h)</option>
               <option value="1m">1 Minute (1m)</option>
@@ -255,7 +247,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-slate-800 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -265,7 +257,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-slate-800 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -274,7 +266,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
             <select
               value={exportFormat}
               disabled
-              className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-700 font-semibold cursor-not-allowed"
+              className="w-full px-2.5 py-1.5 bg-slate-100 border border-slate-300 rounded text-slate-700 font-semibold cursor-not-allowed"
             >
               <option value="csv">CSV (features.csv)</option>
             </select>
@@ -284,8 +276,8 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
 
       {/* IMBALANCE WARNING */}
       {preview.imbalance_warning && (
-        <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg p-4 flex items-start gap-3 text-xs">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded p-3 flex items-start gap-2.5 text-xs">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <div className="font-bold text-amber-950">Unbalanced Training Dataset Warning</div>
             <p className="mt-0.5 text-amber-800 leading-relaxed">{preview.imbalance_warning}</p>
@@ -294,22 +286,21 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
       )}
 
       {/* LABEL COUNTS & SUMMARY CARDS */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
           <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900">Row Counts per Label</h3>
+            <h3 className="text-xs font-semibold text-slate-900">Row Counts per Label</h3>
             <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
               {preview.total_rows} total rows
             </span>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-md font-medium">
+            <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded font-medium">
               <Bot className="w-3.5 h-3.5 text-blue-600" />
               Rule-labeled: <strong className="font-mono text-slate-900">{preview.source_counts.rule}</strong>
             </span>
-            <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md font-medium text-emerald-800">
+            <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-medium text-emerald-800">
               <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
               Human-corrected: <strong className="font-mono">{preview.source_counts.human}</strong>
             </span>
@@ -317,18 +308,18 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
         </div>
 
         {labelEntries.length === 0 ? (
-          <div className="text-xs text-slate-500 py-4 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
+          <div className="text-xs text-slate-500 py-4 text-center bg-slate-50 rounded border border-dashed border-slate-200">
             No feature rows stored yet. Send real traffic from a registered application to build feature data.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {labelEntries.map(([lbl, count]) => {
               const pct = preview.total_rows > 0 ? ((count / preview.total_rows) * 100).toFixed(1) : '0.0';
               const isNormal = lbl === 'normal';
               return (
                 <div
                   key={lbl}
-                  className={`p-3 rounded-lg border ${
+                  className={`p-2.5 rounded border ${
                     isNormal
                       ? 'bg-emerald-50/50 border-emerald-200'
                       : 'bg-rose-50/50 border-rose-200'
@@ -343,8 +334,8 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
                     {lbl}
                   </div>
                   <div className="flex items-baseline justify-between mt-1">
-                    <span className="text-xl font-bold font-mono text-slate-900 tabular-nums">{count}</span>
-                    <span className="text-xs font-mono text-slate-500">{pct}%</span>
+                    <span className="text-lg font-bold font-mono text-slate-900 tabular-nums">{count}</span>
+                    <span className="text-[11px] font-mono text-slate-500">{pct}%</span>
                   </div>
                 </div>
               );
@@ -354,12 +345,12 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
       </div>
 
       {/* PREVIEW TABLE: FIRST 20 ROWS */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-2">
+      <div className="panel overflow-hidden">
+        <div className="panel-head flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Dataset Preview (First 20 Rows)</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Endpoint: <code className="font-mono text-blue-700">GET /api/v1/export/features.csv</code> (Admin auth required)
+            <h3 className="text-xs font-semibold text-slate-900">Dataset Preview (First 20 Rows)</h3>
+            <p className="text-[11px] text-slate-500">
+              Endpoint: <code className="font-mono text-blue-700">GET /api/v1/export/features.csv</code>
             </p>
           </div>
           <span className="text-xs font-mono text-slate-500">
@@ -371,29 +362,29 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
-                <th className="py-2.5 px-3 whitespace-nowrap">Win</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">App</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">Client IP</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Req Count</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">4xx Rate</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">5xx Rate</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Uniq EP</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Uniq UID</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Fail Login</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Avg Gap (ms)</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Avg RT (ms)</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Avg/Max Req Sz</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">POST Ratio</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Night Ratio</th>
-                <th className="py-2.5 px-3 text-right whitespace-nowrap">Uniq UA</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">Label</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">Source</th>
+                <th className="th whitespace-nowrap">Win</th>
+                <th className="th whitespace-nowrap">App</th>
+                <th className="th whitespace-nowrap">Client IP</th>
+                <th className="th text-right whitespace-nowrap">Req Count</th>
+                <th className="th text-right whitespace-nowrap">4xx Rate</th>
+                <th className="th text-right whitespace-nowrap">5xx Rate</th>
+                <th className="th text-right whitespace-nowrap">Uniq EP</th>
+                <th className="th text-right whitespace-nowrap">Uniq UID</th>
+                <th className="th text-right whitespace-nowrap">Fail Login</th>
+                <th className="th text-right whitespace-nowrap">Avg Gap (ms)</th>
+                <th className="th text-right whitespace-nowrap">Avg RT (ms)</th>
+                <th className="th text-right whitespace-nowrap">Avg/Max Req Sz</th>
+                <th className="th text-right whitespace-nowrap">POST Ratio</th>
+                <th className="th text-right whitespace-nowrap">Night Ratio</th>
+                <th className="th text-right whitespace-nowrap">Uniq UA</th>
+                <th className="th whitespace-nowrap">Label</th>
+                <th className="th whitespace-nowrap">Source</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
               {preview.preview_rows.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="py-10 text-center text-slate-400 font-sans text-xs">
+                  <td colSpan={17} className="td py-8 text-center text-slate-400 font-sans text-xs">
                     No matching ML feature rows found for the selected filters.
                   </td>
                 </tr>
@@ -402,44 +393,44 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
                   const isNormal = row.label === 'normal';
                   return (
                     <tr key={row.feature_id} className="hover:bg-blue-50/40 transition-colors">
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="td whitespace-nowrap">
                         <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold">
                           {row.window_size}
                         </span>
                       </td>
-                      <td className="py-2 px-3 whitespace-nowrap font-sans font-medium text-slate-800">
+                      <td className="td whitespace-nowrap font-sans font-medium text-slate-800">
                         {row.app_name}
                       </td>
-                      <td className="py-2 px-3 whitespace-nowrap text-slate-600">{row.client_ip}</td>
-                      <td className="py-2 px-3 text-right tabular-nums font-bold text-slate-900">
+                      <td className="td whitespace-nowrap text-slate-600">{row.client_ip}</td>
+                      <td className="td text-right tabular-nums font-bold text-slate-900">
                         {row.request_count}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">
+                      <td className="td text-right tabular-nums text-slate-700">
                         {row.error_rate_4xx.toFixed(2)}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">
+                      <td className="td text-right tabular-nums text-slate-700">
                         {row.error_rate_5xx.toFixed(2)}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">{row.unique_endpoints}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">{row.unique_user_ids}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">{row.failed_logins}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">
+                      <td className="td text-right tabular-nums text-slate-700">{row.unique_endpoints}</td>
+                      <td className="td text-right tabular-nums text-slate-700">{row.unique_user_ids}</td>
+                      <td className="td text-right tabular-nums text-slate-700">{row.failed_logins}</td>
+                      <td className="td text-right tabular-nums text-slate-700">
                         {row.avg_gap_between_requests_ms}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">
+                      <td className="td text-right tabular-nums text-slate-700">
                         {row.avg_response_time_ms}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-600 whitespace-nowrap">
+                      <td className="td text-right tabular-nums text-slate-600 whitespace-nowrap">
                         {row.avg_request_size} / {row.max_request_size}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">
+                      <td className="td text-right tabular-nums text-slate-700">
                         {row.post_ratio.toFixed(2)}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">
+                      <td className="td text-right tabular-nums text-slate-700">
                         {row.night_time_ratio.toFixed(2)}
                       </td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-700">{row.unique_user_agents}</td>
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="td text-right tabular-nums text-slate-700">{row.unique_user_agents}</td>
+                      <td className="td whitespace-nowrap">
                         <span
                           className={`px-2 py-0.5 rounded font-bold border ${
                             isNormal
@@ -450,7 +441,7 @@ export function MlDataView({ apps, selectedAppId, authToken }: MlDataViewProps) 
                           {row.label}
                         </span>
                       </td>
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="td whitespace-nowrap">
                         <span
                           className={`px-1.5 py-0.5 rounded font-semibold ${
                             row.label_source === 'human'

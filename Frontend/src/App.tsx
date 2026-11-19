@@ -736,7 +736,7 @@ export default function App() {
             aria-label="Navigate dashboard"
             value={activeTab}
             onChange={(event) => setActiveTab(event.target.value as typeof activeTab)}
-            className="lg:hidden max-w-[190px] px-2.5 py-1.5 text-xs font-semibold bg-slate-100 border border-slate-200 rounded-lg text-slate-700"
+            className="lg:hidden max-w-[190px] px-2.5 py-1.5 text-xs font-semibold bg-slate-100 border border-slate-200 rounded text-slate-700"
           >
             <option value="dashboard">Dashboard</option>
             <option value="threats">Threats</option>
@@ -747,23 +747,11 @@ export default function App() {
             <option value="settings">Settings {pendingUsersCount > 0 ? `(${pendingUsersCount})` : ''}</option>
           </select>
 
-          {/* Mode Indicator & status dot */}
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+          {/* Mode & Live status */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-600">
             <span className="status-dot status-dot-ok" />
-            <span className="hidden sm:inline">
-              Mode: <span className="font-semibold text-slate-800">{platformSettings.mode === 'shadow' ? 'Monitoring only' : 'Alert-Only'}</span>
-            </span>
+            <span>Live · refresh 5s</span>
           </div>
-
-          {/* Auto Refresh Toggle */}
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className="btn btn-ghost text-xs px-2.5 py-1 flex items-center gap-1.5 text-slate-600"
-            title="Auto-refresh interval"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${autoRefresh ? 'animate-spin-slow' : 'opacity-40'}`} />
-            <span className="font-mono tabular-nums">{autoRefresh ? '5s' : 'Paused'}</span>
-          </button>
 
           {/* User Profile & Role & Logout */}
           <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
@@ -771,21 +759,13 @@ export default function App() {
               <span className="text-xs font-semibold text-slate-900 leading-tight">
                 {currentFullName || currentUser}
               </span>
-              <div className="flex items-center gap-1 justify-end">
-                {currentRole === 'member' ? (
-                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                    Read-only
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                    Admin
-                  </span>
-                )}
-              </div>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {currentRole === 'member' ? 'member' : 'admin'}
+              </span>
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -794,7 +774,7 @@ export default function App() {
         </header>
 
       {/* 2. BODY CONTENT ROUTED BY ACTIVE TAB */}
-      <main className="flex-1 w-full p-6 flex flex-col gap-6">
+      <main className="flex-1 w-full px-5 py-4 flex flex-col gap-4">
         {activeTab === 'dashboard' && (
           <DashboardView
             apps={apps}
@@ -914,8 +894,8 @@ export default function App() {
 
       {/* ATTACK SIMULATION RESULTS MODAL */}
       {attackResultModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-lg max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded max-w-md w-full p-6 shadow-md">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                 <Flame className="w-5 h-5" />
@@ -930,7 +910,7 @@ export default function App() {
               The platform dispatched simulated brute force, SQL injection, scraping, fake signup, and path traversal requests. All rules evaluated in memory under <strong>Monitoring only (not blocking traffic)</strong>.
             </p>
 
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 mb-4">
+            <div className="p-3 bg-slate-50 rounded border border-slate-200 mb-4">
               <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                 Fired Threat Rules ({attackResultModal.count}):
               </div>
@@ -947,7 +927,7 @@ export default function App() {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setAttackResultModal(null)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
               >
                 Dismiss
               </button>
@@ -956,7 +936,7 @@ export default function App() {
                   setAttackResultModal(null);
                   setActiveTab('threats');
                 }}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <span>View in Threats Registry</span>
               </button>

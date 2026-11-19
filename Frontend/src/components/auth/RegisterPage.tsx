@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Loader2, Check, X as XIcon } from 'lucide-react';
-import { motion } from 'motion/react';
 import { apiFetch } from '../../lib/api';
 
 interface RegisterPageProps {
@@ -128,20 +127,12 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   };
 
   return (
-    <motion.div
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex flex-col gap-6"
-    >
+    <div className="flex flex-col gap-6">
       <div>
-        <h2
-          className="font-bold text-slate-900 mb-1"
-          style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, letterSpacing: '-0.02em' }}
-        >
-          Create account
+        <h2 className="page-title text-slate-900 mb-1">
+          Create Account
         </h2>
-        <p className="text-slate-500" style={{ fontSize: 13.5 }}>Get access to the security dashboard.</p>
+        <p className="page-sub">Access the security dashboard.</p>
       </div>
 
       {errors.general && (
@@ -314,6 +305,6 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
           Sign in
         </button>
       </p>
-    </motion.div>
+    </div>
   );
 }
